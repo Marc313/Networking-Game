@@ -1,28 +1,31 @@
 using TMPro;
 using UnityEngine;
 
-public class LoginCanvas : MonoBehaviour
+namespace ChatClientExample
 {
-    public TMP_InputField field;
-    public GameObject chatCanvas;
-    public ClientManager clientManager;
-
-    private void Update()
+    public class LoginCanvas : MonoBehaviour
     {
-        if (Input.GetKeyDown(KeyCode.Return))
+        public TMP_InputField field;
+        public GameObject chatCanvas;
+        public ClientManager clientManager;
+
+        private void Update()
         {
-            SubmitName();
+            if (Input.GetKeyDown(KeyCode.Return))
+            {
+                SubmitName();
+            }
         }
-    }
 
-    private void SubmitName()
-    {
-        string name = field.text;
+        private void SubmitName()
+        {
+            string name = field.text;
 
-        clientManager.gameObject.SetActive(true);
-        clientManager.SetName(name);
-        field.text = string.Empty;
-        gameObject.SetActive(false);
-        chatCanvas.gameObject.SetActive(true);
+            clientManager.gameObject.SetActive(true);
+            clientManager.SetName(name);
+            field.text = string.Empty;
+            gameObject.SetActive(false);
+            chatCanvas.gameObject.SetActive(true);
+        }
     }
 }
