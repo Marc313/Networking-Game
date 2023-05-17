@@ -1,22 +1,93 @@
+using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class GridManager : MonoBehaviour
 {
+    public int gridSize = 10;
+    [SerializeField] private GridTileSquare tilePrefab;
+
+    private static Dictionary<Vector3Int, GridTileSquare> generatedSquares = new Dictionary<Vector3Int, GridTileSquare>();
     private GridTileSquare[] squares;
+    private static Vector3Int[] playerStartPosList;
 
     private void Start()
     {
-        squares = FindObjectsOfType<GridTileSquare>();
+        //squares = FindObjectsOfType<GridTileSquare>();
+        GenerateTiles();
+        playerStartPosList = new[]{
+            new Vector3Int(0, 0, 0),
+            new Vector3Int(gridSize - 1, 0, gridSize - 1),
+            new Vector3Int(gridSize - 1, 0, 0),
+            new Vector3Int(0, 0, gridSize - 1),
+        };
+    }
+
+    private void GenerateTiles()
+    {
+        for (int x = 0; x < gridSize; x++)
+        {
+            for (int z = 0; z < gridSize; z++)
+            {
+                Vector3Int position = new Vector3Int(x, 0, z);
+                GridTileSquare tile = Instantiate(tilePrefab, position, Quaternion.identity, transform);
+                tile.x = (uint) position.x;
+                tile.z = (uint) position.z;
+                generatedSquares.Add(position, tile);
+            }
+        }
     }
 
     public void MarkTile(uint x, uint y)
     {
-        foreach(GridTileSquare tile in squares)
+        GridTileSquare tile = generatedSquares[new Vector3Int((int)x, 0, (int)y)];
+        tile.MarkAsClicked();
+    }
+
+    public static List<GridTileSquare> GetNeighbours(GridTileSquare tile)
+    {
+        List<GridTileSquare> neighbours = new List<GridTileSquare>();
+        Vector3Int position = new Vector3Int((int) tile.x, 0, (int) tile.z);
+
+        for (int x = -1; x <= 1; x++)
         {
-            if (tile.x == x && tile.y == y)
+            for (int z = -1; z <= 1; z++)
             {
-                tile.MarkAsClicked();
+                if (x == 0 && z == 0) continue;
+
+                Vector3Int newPos = new Vector3Int(position.x + x, 0, position.z + z);
+                if (generatedSquares.ContainsKey(newPos))
+                {
+                    neighbours.Add(generatedSquares[newPos]);
+                }
             }
         }
+
+        return neighbours;
+    }
+
+    public static List<GridTileSquare> GetNeighboursOfPosition(Vector3Int currentPosition)
+    {
+        GridTileSquare tile = generatedSquares[currentPosition];
+        return GetNeighbours(tile);
+    }
+
+    public static GridTileSquare GetTile(Vector3Int position)
+    {
+        if (generatedSquares.ContainsKey(position))
+        {
+            return generatedSquares[position];
+        }
+
+        return null;
+    }
+
+    public static Vector3Int GetPlayerStartPos(int playerID)
+    {
+        if (playerStartPosList == null 
+            || playerID >= playerStartPosList.Length) 
+            return default;
+
+        return playerStartPosList[playerID];
     }
 }

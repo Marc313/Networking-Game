@@ -1,4 +1,5 @@
-﻿using Unity.Networking.Transport; 
+﻿using MarcoHelpers;
+using Unity.Networking.Transport;
 using UnityEngine;
 
 public class Client : MonoBehaviour
@@ -6,11 +7,18 @@ public class Client : MonoBehaviour
     public NetworkDriver networkDriver;
     public NetworkConnection connection;
 
+    // To character manager?
+    public LocalPlayer localPlayerPrefab;
+    public RemotePlayer remotePlayerPrefab;
+
+    private LocalPlayer localPlayer;
+    private RemotePlayer[] remotePlayers = new RemotePlayer[4];
+
     private bool isDoneConnecting;
     private uint playerID;
     private static bool hasTurn;
 
-    void Start()
+    private void Start()
     {
         Debug.LogError("This will show up");
         networkDriver = NetworkDriver.Create();
@@ -57,6 +65,14 @@ public class Client : MonoBehaviour
                 Disconnect();
             }
         }
+
+        if (Input.GetKey(KeyCode.P))
+        {
+            hasTurn = true;
+            UIManager.Instance.SetTurnText(hasTurn);
+
+            EventSystem.RaiseEvent(EventName.LOCAL_MOVE_SENT);
+        }
     }
 
     public void SendPlayerMove(uint x, uint y)
@@ -79,6 +95,8 @@ public class Client : MonoBehaviour
         UIManager.Instance.SetTurnText(hasTurn);
 
         MarkTile(x, y);
+        localPlayer.MoveToTile(new Vector3Int((int) x, 0, (int) y));
+        EventSystem.RaiseEvent(EventName.LOCAL_MOVE_SENT);
     }
 
     public void SendPlayerItemUse(object item)
@@ -99,23 +117,79 @@ public class Client : MonoBehaviour
 
         if (messageType == (uint)NetworkMessageType.SEND_OPPONENT_CHOICE)
         {
-            uint playerID = stream.ReadUInt();
-            uint playerX = stream.ReadUInt();
-            uint playerY = stream.ReadUInt();
-            Debug.LogError($"Client: Player {playerID} moved to {playerX}, {playerY}");
-            MarkTile(playerX, playerY);
-            hasTurn = true;
-            UIManager.Instance.SetTurnText(hasTurn);
+            HandleOpponentTurn(stream);
         }
         else if (messageType == (uint)NetworkMessageType.SEND_PLAYER_ID)
         {
-            playerID = stream.ReadUInt();
-            hasTurn = stream.ReadUInt() == 0 ? false : true;
-            Debug.Log($"Client: Received ID of " + playerID);
-            isDoneConnecting = true;
-            UIManager.Instance.SetTurnText(hasTurn);
-            UIManager.Instance.SetPlayerIDText(playerID);
+            HandleReceivePlayerID(stream);
         }
+        else if (messageType == (uint) NetworkMessageType.REMOTE_PLAYER_JOINED)
+        {
+            HandleRemotePlayerJoined(stream);
+        }
+    }
+
+    private void HandleOpponentTurn(DataStreamReader stream)
+    {
+        uint opponentPlayerID = stream.ReadUInt();
+
+        if (remotePlayers[opponentPlayerID] == null)
+        {
+            CreateRemotePlayer((int)opponentPlayerID);
+        }
+
+        uint playerX = stream.ReadUInt();
+        uint playerY = stream.ReadUInt();
+        Debug.LogError($"Client: Player {opponentPlayerID} moved to {playerX}, {playerY}");
+        remotePlayers[opponentPlayerID].MoveToTile(new Vector3Int((int)playerX, 0, (int)playerY));
+
+        hasTurn = true;
+        UIManager.Instance.SetTurnText(hasTurn);
+        localPlayer.OnReceiveTurn();
+    }
+
+    private void HandleReceivePlayerID(DataStreamReader stream)
+    {
+        playerID = stream.ReadUInt();
+        hasTurn = stream.ReadUInt() == 0 ? false : true;
+        Debug.Log($"Client: Received ID of " + playerID);
+
+        CreateLocalPlayer();
+
+        isDoneConnecting = true;
+        UIManager.Instance.SetTurnText(hasTurn);
+        if (hasTurn) localPlayer.OnReceiveTurn();
+        UIManager.Instance.SetPlayerIDText(playerID);
+
+        if (playerID > 0)
+        {
+            for (int previousID = (int)playerID - 1; previousID >= 0; previousID--)
+            {
+                CreateRemotePlayer(previousID);
+            }
+        }
+    }
+
+    private void HandleRemotePlayerJoined(DataStreamReader stream)
+    {
+        uint remotePlayerID = stream.ReadUInt();
+        CreateRemotePlayer((int)remotePlayerID);
+    }
+
+    private void CreateLocalPlayer()
+    {
+        Vector3Int playerStartPos = GridManager.GetPlayerStartPos((int)playerID);
+        localPlayer = Instantiate(localPlayerPrefab, playerStartPos, Quaternion.identity);
+        localPlayer.playerID = (int) playerID;
+    }
+
+    private void CreateRemotePlayer(int remotePlayerID)
+    {
+        Vector3Int playerStartPos = GridManager.GetPlayerStartPos(remotePlayerID);
+        remotePlayers[remotePlayerID] = Instantiate(remotePlayerPrefab, playerStartPos, Quaternion.identity);
+        remotePlayers[remotePlayerID].playerID = remotePlayerID;
+
+        Debug.LogError($"Created player {remotePlayerID} at {playerStartPos}");
     }
 
     private void SendHandshake()
@@ -132,7 +206,7 @@ public class Client : MonoBehaviour
     {
         Debug.Log("Client got disconnected from server");
         networkDriver.BeginSend(connection, out var writer);
-        writer.WriteUInt(3);
+        writer.WriteUInt((uint) NetworkMessageType.PLAYER_QUIT);
         networkDriver.EndSend(writer);
         connection = default(NetworkConnection);
     }

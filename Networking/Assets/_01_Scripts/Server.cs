@@ -8,6 +8,7 @@ public delegate void NetworkMessageHandler(object handler, NetworkConnection con
 public enum NetworkMessageType
 {
     PLAYER_JOINED = 0,          // Acts as handshake
+    REMOTE_PLAYER_JOINED = 7,
     HANDSHAKE_RESPONSE = 1,
     PLAYER_MOVED = 2,
     PLAYER_QUIT = 3,
@@ -19,8 +20,8 @@ public enum NetworkMessageType
 public class Server : MonoBehaviour
 {
     static Dictionary<NetworkMessageType, NetworkMessageHandler> networkMessageHandlers = new Dictionary<NetworkMessageType, NetworkMessageHandler> {
-            { NetworkMessageType.PLAYER_JOINED, HandleClientMoved },
-            { NetworkMessageType.PLAYER_MOVED, HandleClientMessage },
+            { NetworkMessageType.PLAYER_JOINED, HandleClientJoined },
+            { NetworkMessageType.PLAYER_MOVED, HandlePlayerMoved },
             { NetworkMessageType.PLAYER_QUIT, HandleClientExit },
         };
 
@@ -95,7 +96,7 @@ public class Server : MonoBehaviour
         }
     }
 
-    static void HandleClientMoved(object handler, NetworkConnection connection, DataStreamReader stream)
+    static void HandleClientJoined(object handler, NetworkConnection connection, DataStreamReader stream)
     {
         Server serv = handler as Server;
         uint playerID = (uint) serv.nameList.Count;
@@ -104,9 +105,8 @@ public class Server : MonoBehaviour
         serv.nameList.Add(connection, playerID);
         Debug.Log("New Client Joined with ID: " + playerID);
 
-        // Send message back
-        DataStreamWriter writer;
-        int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, connection, out writer);
+        // Send player id message back to connection
+        int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, connection, out var writer);
 
         // non-0 is an error code
         if (result == 0)
@@ -123,9 +123,31 @@ public class Server : MonoBehaviour
         {
             Debug.LogError($"Could not write message to driver: {result}", serv);
         }
+
+        // Send player joined signal to other connections
+        foreach(NetworkConnection otherConnection in serv.nameList.Keys)
+        {
+            if (otherConnection != connection)
+            {
+                int result2 = serv.m_Driver.BeginSend(NetworkPipeline.Null, otherConnection, out var writer2);
+
+                // non-0 is an error code
+                if (result2 == 0)
+                {
+                    writer.WriteUInt((uint) NetworkMessageType.REMOTE_PLAYER_JOINED);
+                    writer.WriteUInt(playerID);
+
+                    serv.m_Driver.EndSend(writer);
+                }
+                else
+                {
+                    Debug.LogError($"Could not write message to driver: {result2}", serv);
+                }
+            }
+        }
     }
 
-    static void HandleClientMessage(object handler, NetworkConnection connection, DataStreamReader stream)
+    static void HandlePlayerMoved(object handler, NetworkConnection connection, DataStreamReader stream)
     {
         // Pop message
         uint playerX = stream.ReadUInt();
@@ -136,7 +158,7 @@ public class Server : MonoBehaviour
 
         if (serv.nameList.ContainsKey(connection))
         {
-            // Send message back
+            // Send confirm message back
             DataStreamWriter writer;
             int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, connection, out writer);
 
@@ -154,7 +176,7 @@ public class Server : MonoBehaviour
 
                     serv.m_Driver.BeginSend(NetworkPipeline.Null, opponent, out writer);
                     writer.WriteUInt((uint) NetworkMessageType.SEND_OPPONENT_CHOICE);
-                    writer.WriteUInt(serv.nameList[opponent]);
+                    writer.WriteUInt(serv.nameList[connection]);
                     writer.WriteUInt(playerX);
                     writer.WriteUInt(playerY);
                     serv.m_Driver.EndSend(writer);

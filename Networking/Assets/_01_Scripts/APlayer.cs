@@ -1,12 +1,21 @@
 ﻿using UnityEngine;
 
 // Subclasses: LocalPlayer, RemotePlayer
-public abstract class APlayer : MonoBehaviour
+public abstract class APlayer : MovingObject
 {
-    [HideInInspector] public GridCord currentPosition;
+    [HideInInspector] public Vector3Int currentPosition;
+    [HideInInspector] public int playerID;
+    public float walkDuration = 1;
 
-    public virtual void MoveToTile()
+    private void Start()
     {
+        currentPosition = transform.position.ToVector3Int();
+    }
 
+    public virtual void MoveToTile(Vector3Int position)
+    {
+        GridManager.GetTile(currentPosition).Disappear();
+        MoveToInSeconds(currentPosition, position, walkDuration);
+        currentPosition = position;
     }
 }
