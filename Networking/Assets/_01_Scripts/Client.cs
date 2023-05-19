@@ -1,4 +1,5 @@
 ﻿using MarcoHelpers;
+using System;
 using Unity.Networking.Transport;
 using UnityEngine;
 
@@ -127,6 +128,27 @@ public class Client : MonoBehaviour
         {
             HandleRemotePlayerJoined(stream);
         }
+        else if (messageType == (uint) NetworkMessageType.GAME_START)
+        {
+            HandleGameStart(stream);
+        }
+    }
+
+    private void HandleGameStart(DataStreamReader stream)
+    {
+        uint startingPlayerID = stream.ReadUInt();
+
+        if (playerID == startingPlayerID)
+        {
+            ReceiveTurn();
+        }
+    }
+
+    private void ReceiveTurn()
+    {
+        hasTurn = true;
+        localPlayer.OnReceiveTurn();
+        UIManager.Instance.SetTurnText(hasTurn);
     }
 
     private void HandleOpponentTurn(DataStreamReader stream)
@@ -140,25 +162,25 @@ public class Client : MonoBehaviour
 
         uint playerX = stream.ReadUInt();
         uint playerY = stream.ReadUInt();
+        uint nextPlayerID = stream.ReadUInt();
         Debug.LogError($"Client: Player {opponentPlayerID} moved to {playerX}, {playerY}");
         remotePlayers[opponentPlayerID].MoveToTile(new Vector3Int((int)playerX, 0, (int)playerY));
 
-        hasTurn = true;
-        UIManager.Instance.SetTurnText(hasTurn);
-        localPlayer.OnReceiveTurn();
+        if (playerID == nextPlayerID)
+        {
+            ReceiveTurn();
+        }
     }
 
     private void HandleReceivePlayerID(DataStreamReader stream)
     {
         playerID = stream.ReadUInt();
-        hasTurn = stream.ReadUInt() == 0 ? false : true;
         Debug.Log($"Client: Received ID of " + playerID);
 
         CreateLocalPlayer();
 
         isDoneConnecting = true;
         UIManager.Instance.SetTurnText(hasTurn);
-        if (hasTurn) localPlayer.OnReceiveTurn();
         UIManager.Instance.SetPlayerIDText(playerID);
 
         if (playerID > 0)

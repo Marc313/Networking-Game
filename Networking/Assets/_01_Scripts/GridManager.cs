@@ -6,6 +6,7 @@ public class GridManager : MonoBehaviour
 {
     public int gridSize = 10;
     [SerializeField] private GridTileSquare tilePrefab;
+    [SerializeField] private GameObject itemPrefab;
 
     private static Dictionary<Vector3Int, GridTileSquare> generatedSquares = new Dictionary<Vector3Int, GridTileSquare>();
     private GridTileSquare[] squares;
@@ -15,6 +16,7 @@ public class GridManager : MonoBehaviour
     {
         //squares = FindObjectsOfType<GridTileSquare>();
         GenerateTiles();
+        GenerateItem();
         playerStartPosList = new[]{
             new Vector3Int(0, 0, 0),
             new Vector3Int(gridSize - 1, 0, gridSize - 1),
@@ -34,6 +36,22 @@ public class GridManager : MonoBehaviour
                 tile.x = (uint) position.x;
                 tile.z = (uint) position.z;
                 generatedSquares.Add(position, tile);
+            }
+        }
+    }
+
+    private void GenerateItem()
+    {
+        for (int i = 0; i <= 5; i++)
+        {
+            int xPos = Random.Range(0, gridSize);
+            int zPos = Random.Range(0, gridSize);
+
+            if (!((xPos == 0 && zPos == 0)
+                || Mathf.Abs(xPos - zPos) == gridSize - 1
+                || (xPos == gridSize - 1 && zPos == gridSize - 1)))
+            {
+                Instantiate(itemPrefab, new Vector3(xPos, 1f, zPos), Quaternion.identity);
             }
         }
     }

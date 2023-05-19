@@ -111,5 +111,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab7b98171ddaace4c9ef2a1305ddead9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  rotationCurve:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   currentPosition: {x: 0, y: 0, z: 0}
+  playerID: 0
+  walkDuration: 0.5
   possibleTiles: []

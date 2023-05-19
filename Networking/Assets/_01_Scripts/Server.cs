@@ -1,20 +1,23 @@
 ﻿using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Networking.Transport;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UI;
 
 public delegate void NetworkMessageHandler(object handler, NetworkConnection con, DataStreamReader stream);
 
 public enum NetworkMessageType
 {
     PLAYER_JOINED = 0,          // Acts as handshake
-    REMOTE_PLAYER_JOINED = 7,
     HANDSHAKE_RESPONSE = 1,
     PLAYER_MOVED = 2,
     PLAYER_QUIT = 3,
     MOVE_CONFIRM = 4,
     SEND_OPPONENT_CHOICE = 5,
     SEND_PLAYER_ID = 6,          // Acts as handshake response
+    REMOTE_PLAYER_JOINED = 7,
+    GAME_START = 8,
 }
 
 public class Server : MonoBehaviour
@@ -25,6 +28,7 @@ public class Server : MonoBehaviour
             { NetworkMessageType.PLAYER_QUIT, HandleClientExit },
         };
 
+    public Button startButton;
     public NetworkDriver m_Driver;
     private NativeList<NetworkConnection> m_Connections;
     private Dictionary<NetworkConnection, uint> nameList = new Dictionary<NetworkConnection, uint>();
@@ -33,6 +37,7 @@ public class Server : MonoBehaviour
     {
         StartServer();
         m_Connections = new NativeList<NetworkConnection>(16, Allocator.Persistent);
+        if (startButton != null) startButton.onClick.AddListener(() => BroadcastGameStart(this));
     }
 
     private void StartServer()
@@ -96,7 +101,7 @@ public class Server : MonoBehaviour
         }
     }
 
-    static void HandleClientJoined(object handler, NetworkConnection connection, DataStreamReader stream)
+    private static void HandleClientJoined(object handler, NetworkConnection connection, DataStreamReader stream)
     {
         Server serv = handler as Server;
         uint playerID = (uint) serv.nameList.Count;
@@ -127,27 +132,11 @@ public class Server : MonoBehaviour
         // Send player joined signal to other connections
         foreach(NetworkConnection otherConnection in serv.nameList.Keys)
         {
-            if (otherConnection != connection)
-            {
-                int result2 = serv.m_Driver.BeginSend(NetworkPipeline.Null, otherConnection, out var writer2);
-
-                // non-0 is an error code
-                if (result2 == 0)
-                {
-                    writer.WriteUInt((uint) NetworkMessageType.REMOTE_PLAYER_JOINED);
-                    writer.WriteUInt(playerID);
-
-                    serv.m_Driver.EndSend(writer);
-                }
-                else
-                {
-                    Debug.LogError($"Could not write message to driver: {result2}", serv);
-                }
-            }
+            BroadcastPlayerJoined(connection, serv, playerID, otherConnection);
         }
     }
 
-    static void HandlePlayerMoved(object handler, NetworkConnection connection, DataStreamReader stream)
+    private static void HandlePlayerMoved(object handler, NetworkConnection connection, DataStreamReader stream)
     {
         // Pop message
         uint playerX = stream.ReadUInt();
@@ -175,11 +164,12 @@ public class Server : MonoBehaviour
                     if (opponent == connection) continue;
 
                     serv.m_Driver.BeginSend(NetworkPipeline.Null, opponent, out writer);
-                    writer.WriteUInt((uint) NetworkMessageType.SEND_OPPONENT_CHOICE);
-                    writer.WriteUInt(serv.nameList[connection]);
-                    writer.WriteUInt(playerX);
-                    writer.WriteUInt(playerY);
-                    serv.m_Driver.EndSend(writer);
+                    writer.WriteUInt((uint)NetworkMessageType.SEND_OPPONENT_CHOICE);        // Message Type
+                    writer.WriteUInt(serv.nameList[connection]);                            // PlayerID of player that moved
+                    writer.WriteUInt(playerX);                                              // New x of player
+                    writer.WriteUInt(playerY);                                              // New y of player
+                    writer.WriteUInt((uint) GetNextPlayerID(serv.nameList[connection], serv.nameList.Count));      // PlayerID of next player
+                    serv.m_Driver.EndSend(writer);                                      
                 }
             }
             else
@@ -193,7 +183,56 @@ public class Server : MonoBehaviour
         }
     }
 
-    static void HandleClientExit(object handler, NetworkConnection connection, DataStreamReader stream)
+    private static int GetNextPlayerID(uint currentPlayerID, int numOfConnections)
+    {
+        return ((int)currentPlayerID + 1) % numOfConnections;
+    }
+
+    private static void BroadcastPlayerJoined(NetworkConnection connection, Server serv, uint playerID, NetworkConnection otherConnection)
+    {
+        if (otherConnection != connection)
+        {
+            int result2 = serv.m_Driver.BeginSend(NetworkPipeline.Null, otherConnection, out var writer2);
+
+            // non-0 is an error code
+            if (result2 == 0)
+            {
+                writer2.WriteUInt((uint)NetworkMessageType.REMOTE_PLAYER_JOINED);
+                writer2.WriteUInt(playerID);
+
+                serv.m_Driver.EndSend(writer2);
+            }
+            else
+            {
+                Debug.LogError($"Could not write message to driver: {result2}", serv);
+            }
+        }
+    }
+
+    private static void BroadcastGameStart(object handler)
+    {
+        Server serv = handler as Server;
+
+        foreach (NetworkConnection connection in serv.nameList.Keys)
+        {
+            int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, connection, out var writer);
+
+            // non-0 is an error code
+            if (result == 0)
+            {
+                writer.WriteUInt((uint)NetworkMessageType.GAME_START);
+                writer.WriteUInt(0);
+
+                serv.m_Driver.EndSend(writer);
+            }
+            else
+            {
+                Debug.LogError($"Could not write message to driver: {result}", serv);
+            }
+        }
+    }
+
+    private static void HandleClientExit(object handler, NetworkConnection connection, DataStreamReader stream)
     {
         Server serv = handler as Server;
 
