@@ -2,6 +2,8 @@
 using System;
 using Unity.Networking.Transport;
 using UnityEngine;
+using UnityEngine.Networking.Types;
+using UnityEngine.UIElements;
 
 public class Client : MonoBehaviour
 {
@@ -13,7 +15,7 @@ public class Client : MonoBehaviour
     public RemotePlayer remotePlayerPrefab;
 
     private LocalPlayer localPlayer;
-    private RemotePlayer[] remotePlayers = new RemotePlayer[4];
+    private RemotePlayer[] remotePlayers = new RemotePlayer[3];
 
     private bool isDoneConnecting;
     private uint playerID;
@@ -28,6 +30,16 @@ public class Client : MonoBehaviour
         var endpoint = NetworkEndPoint.LoopbackIpv4;
         endpoint.Port = 9000;
         connection = networkDriver.Connect(endpoint);
+    }
+
+    private void OnEnable()
+    {
+        EventSystem.Subscribe(EventName.PLAYERS_SWAP, SwapPlayerPositions);
+    }
+
+    private void OnDisable()
+    {
+        EventSystem.Unsubscribe(EventName.PLAYERS_SWAP, SwapPlayerPositions);
     }
 
     public void OnDestroy()
@@ -116,11 +128,11 @@ public class Client : MonoBehaviour
     {
         uint messageType = stream.ReadUInt();
 
-        if (messageType == (uint)NetworkMessageType.SEND_OPPONENT_CHOICE)
+        if (messageType == (uint) NetworkMessageType.SEND_OPPONENT_CHOICE)
         {
             HandleOpponentTurn(stream);
         }
-        else if (messageType == (uint)NetworkMessageType.SEND_PLAYER_ID)
+        else if (messageType == (uint) NetworkMessageType.SEND_PLAYER_ID)
         {
             HandleReceivePlayerID(stream);
         }
@@ -132,11 +144,31 @@ public class Client : MonoBehaviour
         {
             HandleGameStart(stream);
         }
+        else if (messageType == (uint) NetworkMessageType.SPAWN_OBJECT)
+        {
+            HandleSpawnObject(stream);
+        }
     }
 
-    private void HandleGameStart(DataStreamReader stream)
+    private static void HandleSpawnObject(DataStreamReader reader)
     {
-        uint startingPlayerID = stream.ReadUInt();
+        uint networkedID = reader.ReadUInt();
+        string prefabKey = reader.ReadFixedString128().ToString();
+        float xPos = reader.ReadFloat();
+        float yPos = reader.ReadFloat();
+        float zPos = reader.ReadFloat();
+        float xRot = reader.ReadFloat();
+        float yRot = reader.ReadFloat();
+        float zRot = reader.ReadFloat();
+
+        NetworkManager.Instance.Create(networkedID, prefabKey, false, 
+                                        new Vector3(xPos, yPos, zPos), 
+                                        Quaternion.Euler(xRot, yRot, zRot));
+    }
+
+    private void HandleGameStart(DataStreamReader reader)
+    {
+        uint startingPlayerID = reader.ReadUInt();
 
         if (playerID == startingPlayerID)
         {
@@ -151,18 +183,18 @@ public class Client : MonoBehaviour
         UIManager.Instance.SetTurnText(hasTurn);
     }
 
-    private void HandleOpponentTurn(DataStreamReader stream)
+    private void HandleOpponentTurn(DataStreamReader reader)
     {
-        uint opponentPlayerID = stream.ReadUInt();
+        uint opponentPlayerID = reader.ReadUInt();
 
         if (remotePlayers[opponentPlayerID] == null)
         {
             CreateRemotePlayer((int)opponentPlayerID);
         }
 
-        uint playerX = stream.ReadUInt();
-        uint playerY = stream.ReadUInt();
-        uint nextPlayerID = stream.ReadUInt();
+        uint playerX = reader.ReadUInt();
+        uint playerY = reader.ReadUInt();
+        uint nextPlayerID = reader.ReadUInt();
         Debug.LogError($"Client: Player {opponentPlayerID} moved to {playerX}, {playerY}");
         remotePlayers[opponentPlayerID].MoveToTile(new Vector3Int((int)playerX, 0, (int)playerY));
 
@@ -172,9 +204,9 @@ public class Client : MonoBehaviour
         }
     }
 
-    private void HandleReceivePlayerID(DataStreamReader stream)
+    private void HandleReceivePlayerID(DataStreamReader reader)
     {
-        playerID = stream.ReadUInt();
+        playerID = reader.ReadUInt();
         Debug.Log($"Client: Received ID of " + playerID);
 
         CreateLocalPlayer();
@@ -192,9 +224,9 @@ public class Client : MonoBehaviour
         }
     }
 
-    private void HandleRemotePlayerJoined(DataStreamReader stream)
+    private void HandleRemotePlayerJoined(DataStreamReader reader)
     {
-        uint remotePlayerID = stream.ReadUInt();
+        uint remotePlayerID = reader.ReadUInt();
         CreateRemotePlayer((int)remotePlayerID);
     }
 
@@ -236,5 +268,13 @@ public class Client : MonoBehaviour
     private void MarkTile(uint x, uint y)
     {
         FindObjectOfType<GridManager>().MarkTile(x, y);
+    }
+
+    private void SwapPlayerPositions(object value = null)
+    {
+        RemotePlayer randomRemote = remotePlayers.GetRandomEntry();
+        Vector3 remotePos = randomRemote.transform.position;
+        randomRemote.SetPosition(localPlayer.transform.position);
+        localPlayer.SetPosition(remotePos);
     }
 }

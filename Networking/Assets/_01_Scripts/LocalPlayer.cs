@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using MarcoHelpers;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -8,8 +9,9 @@ using UnityEngine;
 public class LocalPlayer : APlayer
 {
     [HideInInspector] public List<GridTileSquare> possibleTiles = new List<GridTileSquare>();
-    private object currentItem;
     private int points;
+
+    public Item currentItem;
 
     private void Start()
     {
@@ -22,8 +24,16 @@ public class LocalPlayer : APlayer
         if (Input.GetKeyDown(KeyCode.Mouse1))
         {
             Debug.Log("Used item!");
+            currentItem.Use(this);
             currentItem = null;
         }
+    }
+
+    public override void SetPosition(Vector3 position)
+    {
+        EventSystem.RaiseEvent(EventName.LOCAL_MOVE_SENT);
+        base.SetPosition(position);
+        ShowPossibleMoves();
     }
 
     public void OnReceiveTurn()

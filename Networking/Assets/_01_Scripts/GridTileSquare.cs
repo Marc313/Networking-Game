@@ -2,7 +2,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class GridTileSquare : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
+public class GridTileSquare : NetworkedObject, IPointerClickHandler, IPointerEnterHandler
 {
     public uint x, z;
     public Material clickedMaterial;
@@ -12,6 +12,11 @@ public class GridTileSquare : MonoBehaviour, IPointerClickHandler, IPointerEnter
 
     private void OnEnable() => MarcoHelpers.EventSystem.Subscribe(EventName.LOCAL_MOVE_SENT, ResetMovePossibility);
     private void OnDisable() => MarcoHelpers.EventSystem.Unsubscribe(EventName.LOCAL_MOVE_SENT, ResetMovePossibility);
+
+/*    public void Init(uint x, uint z)
+    {
+
+    }*/
 
     public void OnPointerClick(PointerEventData eventData)
     {

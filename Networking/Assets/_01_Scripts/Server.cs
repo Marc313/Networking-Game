@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Unity.Collections;
 using Unity.Networking.Transport;
-using Unity.VisualScripting;
+using Unity.Networking.Transport.Error;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -18,6 +19,8 @@ public enum NetworkMessageType
     SEND_PLAYER_ID = 6,          // Acts as handshake response
     REMOTE_PLAYER_JOINED = 7,
     GAME_START = 8,
+    SPAWN_OBJECT = 9,
+    DESTROY_OBJECT = 10
 }
 
 public class Server : MonoBehaviour
@@ -30,8 +33,10 @@ public class Server : MonoBehaviour
 
     public Button startButton;
     public NetworkDriver m_Driver;
+
     private NativeList<NetworkConnection> m_Connections;
     private Dictionary<NetworkConnection, uint> nameList = new Dictionary<NetworkConnection, uint>();
+    private static bool isStarted;
 
     private void Start()
     {
@@ -103,6 +108,11 @@ public class Server : MonoBehaviour
 
     private static void HandleClientJoined(object handler, NetworkConnection connection, DataStreamReader stream)
     {
+        if (isStarted) {
+            Debug.Log("Room full!");
+            return; 
+        }
+
         Server serv = handler as Server;
         uint playerID = (uint) serv.nameList.Count;
 
@@ -157,19 +167,30 @@ public class Server : MonoBehaviour
                 writer.WriteUInt((uint)NetworkMessageType.MOVE_CONFIRM);
                 serv.m_Driver.EndSend(writer);
 
+                // TODO: Only send destroy and move
                 // For all other connections:
                 // Send opponent move
                 foreach (NetworkConnection opponent in serv.nameList.Keys)
                 {
                     if (opponent == connection) continue;
 
+                    uint nextPlayerID = (uint)GetNextPlayerID(serv.nameList[connection], serv.nameList.Count);
+
                     serv.m_Driver.BeginSend(NetworkPipeline.Null, opponent, out writer);
-                    writer.WriteUInt((uint)NetworkMessageType.SEND_OPPONENT_CHOICE);        // Message Type
+                    writer.WriteUInt((uint) NetworkMessageType.SEND_OPPONENT_CHOICE);       // Message Type
                     writer.WriteUInt(serv.nameList[connection]);                            // PlayerID of player that moved
                     writer.WriteUInt(playerX);                                              // New x of player
                     writer.WriteUInt(playerY);                                              // New y of player
-                    writer.WriteUInt((uint) GetNextPlayerID(serv.nameList[connection], serv.nameList.Count));      // PlayerID of next player
-                    serv.m_Driver.EndSend(writer);                                      
+                    writer.WriteUInt(nextPlayerID);                                         // PlayerID of next player
+                    serv.m_Driver.EndSend(writer);
+
+                    //GridManager.GetTile(new Vector3Int((int)playerX, 0, (int)playerY)).Disappear();
+                    //NetworkManager.Instance.Destroy(GridManager.GetTile(new Vector3Int((int)playerX, 0, (int)playerY)).networkedID);
+
+                    if (nextPlayerID == 0)
+                    {
+                        TrySpawnItem(serv);
+                    }
                 }
             }
             else
@@ -180,6 +201,23 @@ public class Server : MonoBehaviour
         else
         {
             Debug.LogError($"Received message from unlisted connection");
+        }
+    }
+
+    private static void TrySpawnItem(Server serv)
+    {
+        int itemID = ItemSpawner.Instance.TryGetItem();
+        if (itemID != -1)
+        {
+            string prefabKey = "item" + itemID;
+            Vector3Int tilePosition = GridManager.GetRandomExistingTilePosition();
+            Vector3 actualPosition = new Vector3(tilePosition.x, 1f, tilePosition.z);
+
+            // Spawn item
+            NetworkedObject itemObject = NetworkManager.Instance.Create(0, prefabKey, true, actualPosition, Quaternion.identity);
+
+            // Broadcast item spawn to all connections
+            BroadcastSpawn(serv, itemObject.networkedID, prefabKey, actualPosition, Quaternion.identity);
         }
     }
 
@@ -224,6 +262,7 @@ public class Server : MonoBehaviour
                 writer.WriteUInt(0);
 
                 serv.m_Driver.EndSend(writer);
+                isStarted = true;
             }
             else
             {
@@ -276,6 +315,38 @@ public class Server : MonoBehaviour
         {
             m_Driver.Dispose();
             m_Connections.Dispose();
+        }
+    }
+
+    public static void BroadcastSpawn(object handler, uint networkedID, string prefabKey, Vector3 position, Quaternion rotation)
+    {
+        Server serv = handler as Server;
+
+        foreach (NetworkConnection connection in serv.nameList.Keys)
+        {
+            if (connection == serv.nameList.Keys.ToArray()[0]) return;
+
+            int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, connection, out var writer);
+
+            // non-0 is an error code
+            if (result == 0)
+            {
+                writer.WriteUInt((uint)NetworkMessageType.SPAWN_OBJECT);
+                writer.WriteUInt(networkedID);
+                writer.WriteFixedString128(prefabKey);
+                writer.WriteFloat(position.x);
+                writer.WriteFloat(position.y);
+                writer.WriteFloat(position.z);
+                writer.WriteFloat(rotation.eulerAngles.x);
+                writer.WriteFloat(rotation.eulerAngles.y);
+                writer.WriteFloat(rotation.eulerAngles.z);
+
+                serv.m_Driver.EndSend(writer);
+            }
+            else
+            {
+                Debug.LogError($"Could not write message to driver: {(StatusCode) result}", serv);
+            }
         }
     }
 }

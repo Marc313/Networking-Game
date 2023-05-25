@@ -18,4 +18,10 @@ public abstract class APlayer : MovingObject
         MoveToInSeconds(currentPosition, position, walkDuration);
         currentPosition = position;
     }
+
+    public virtual void SetPosition(Vector3 position)
+    {
+        transform.position = position;
+        currentPosition = position.ToVector3Int();
+    }
 }

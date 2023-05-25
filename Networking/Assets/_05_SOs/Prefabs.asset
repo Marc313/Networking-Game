@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f8df7a3fa2e5a94795ab83cef1bbf38, type: 3}
+  m_Name: Prefabs
+  m_EditorClassIdentifier: 
+  prefabs:
+  - key: player
+    networkedObject: {fileID: 0}
+  - key: tile
+    networkedObject: {fileID: -6932337553477601679, guid: 0580f69f532524d45afd266d80d12536, type: 3}
+  - key: item0
+    networkedObject: {fileID: -4283976600711847396, guid: 33c6e6eaff8af9640808999ded81a844, type: 3}
+  - key: item1
+    networkedObject: {fileID: -4283976600711847396, guid: 33c6e6eaff8af9640808999ded81a844, type: 3}
+  - key: item2
+    networkedObject: {fileID: -4283976600711847396, guid: 33c6e6eaff8af9640808999ded81a844, type: 3}
+  - key: item3
+    networkedObject: {fileID: -4283976600711847396, guid: 33c6e6eaff8af9640808999ded81a844, type: 3}
