@@ -37,6 +37,7 @@ public class Server : MonoBehaviour
     private NativeList<NetworkConnection> m_Connections;
     private Dictionary<NetworkConnection, uint> nameList = new Dictionary<NetworkConnection, uint>();
     private static bool isStarted;
+    private static int callsThisFrame = 0;
 
     private void Start()
     {
@@ -63,6 +64,8 @@ public class Server : MonoBehaviour
 
         UpdateConnections();
         HandleMessages();
+
+        callsThisFrame = 0;
 
         // If all players are ready or other game start condition
         
@@ -327,6 +330,13 @@ public class Server : MonoBehaviour
             if (connection == serv.nameList.Keys.ToArray()[0]) return;
 
             int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, connection, out var writer);
+            callsThisFrame++;
+            
+
+            if (callsThisFrame > 10)
+            {
+                serv.m_Driver.ScheduleUpdate().Complete();
+            }
 
             // non-0 is an error code
             if (result == 0)
