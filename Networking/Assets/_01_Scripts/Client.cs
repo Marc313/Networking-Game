@@ -148,6 +148,10 @@ public class Client : MonoBehaviour
         {
             HandleSpawnObject(stream);
         }
+        else if (messageType == (uint) NetworkMessageType.RECEIVE_ITEM_USE) 
+        {
+            HandleReceiveItem(stream);
+        }
     }
 
     private static void HandleSpawnObject(DataStreamReader reader)
@@ -206,6 +210,7 @@ public class Client : MonoBehaviour
 
     private void HandleReceivePlayerID(DataStreamReader reader)
     {
+        FindObjectOfType<GridManager>().OnGameStart();
         playerID = reader.ReadUInt();
         Debug.Log($"Client: Received ID of " + playerID);
 
@@ -222,6 +227,7 @@ public class Client : MonoBehaviour
                 CreateRemotePlayer(previousID);
             }
         }
+
     }
 
     private void HandleRemotePlayerJoined(DataStreamReader reader)
@@ -276,5 +282,26 @@ public class Client : MonoBehaviour
         Vector3 remotePos = randomRemote.transform.position;
         randomRemote.SetPosition(localPlayer.transform.position);
         localPlayer.SetPosition(remotePos);
+    }
+
+    public void OnUseItem(Item currentItem)
+    {
+        uint messageType = (uint)NetworkMessageType.SEND_ITEM_USE;
+
+        networkDriver.BeginSend(connection, out var writer);
+        writer.WriteUInt(messageType);
+        writer.WriteUInt(playerID);
+        writer.WriteInt(currentItem.itemID);
+        networkDriver.EndSend(writer);
+    }
+
+    private void HandleReceiveItem(DataStreamReader reader)
+    {
+        uint itemUserID = reader.ReadUInt();
+        int itemID = reader.ReadInt();
+
+        // Use playermanager and itemmanager.
+        APlayer player = itemUserID == playerID ? localPlayer : remotePlayers[itemUserID];
+        ItemSpawner.Instance.GetItemWithID(itemID).Use(player);
     }
 }

@@ -4,6 +4,7 @@ public class ItemSpawner : Singleton<ItemSpawner>
 {
     [Tooltip("The probability that an item will spawn after a round")]
     [SerializeField] private float itemSpawnProbability = 0.3f;
+    [SerializeField] private Item[] items;
 
     private void Awake()
     {
@@ -21,4 +22,9 @@ public class ItemSpawner : Singleton<ItemSpawner>
         // -1 means that no item should be spawned
         return -1;
     }
+
+    public Item GetItemWithID(int id)
+    {
+        return items[id];
+    }   
 }

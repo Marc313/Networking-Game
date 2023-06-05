@@ -13,14 +13,20 @@ public class GridTileSquare : NetworkedObject, IPointerClickHandler, IPointerEnt
     private void OnEnable() => MarcoHelpers.EventSystem.Subscribe(EventName.LOCAL_MOVE_SENT, ResetMovePossibility);
     private void OnDisable() => MarcoHelpers.EventSystem.Unsubscribe(EventName.LOCAL_MOVE_SENT, ResetMovePossibility);
 
-/*    public void Init(uint x, uint z)
-    {
+    /*    public void Init(uint x, uint z)
+        {
 
-    }*/
+        }*/
+
+    public override void OnCreate()
+    {
+        base.OnCreate();
+        GridManager.TryAddTile(this);
+    }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (!isPossibleMove)
+        if (!isPossibleMove || Input.GetKey(KeyCode.Mouse1))
         {
             Debug.Log("Invalid Move!");
             return;

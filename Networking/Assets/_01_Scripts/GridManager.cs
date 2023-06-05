@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class GridManager : MonoBehaviour
+public class GridManager : NetworkedObject
 {
     public static int sGridSize;
     [SerializeField] private int gridSize = 10;
@@ -15,26 +15,37 @@ public class GridManager : MonoBehaviour
 
     public Server server;
 
-    private void Start()
-    {
-        sGridSize = gridSize;
-        OnGameStart();
-    }
-
     /*    private void Start()
         {
-            // Convert to trigger with the server button
-            server = FindObjectOfType<Server>();
-            if (server != null)
-            {
-                OnGameStart();
-            }
+            sGridSize = gridSize;
+            OnGameStart();
         }*/
+
+/*    private void Start()
+    {
+        // Convert to trigger with the server button
+        //server = FindObjectOfType<Server>();
+        if (server != null)
+        {
+            OnGameStart();
+        }
+    }*/
 
     public void OnGameStart()
     {
+        sGridSize = gridSize;
+
+        if (generatedSquares.Count > 0)
+        {
+            Debug.Log("Grid already generated");
+        }
+        else
+        {
+            GenerateAllTiles();
+        }
+
         //squares = FindObjectsOfType<GridTileSquare>();
-        GenerateAllTiles();
+
         //GenerateItem();
         playerStartPosList = new[]{
             new Vector3Int(0, 0, 0),
@@ -54,10 +65,11 @@ public class GridManager : MonoBehaviour
             for (int z = 0; z < gridSize; z++)
             {
                 GenerateTileOnPosition(x, z);
-                /*uint id = NetworkManager.GetNextID;
+
+/*                uint id = NetworkManager.GetNextID;
                 NetworkedObject o = GenerateTileOnPosition(id, x, z);*/
                 // Broadcast message to all clients to spawn a tile
-                // server.BroadcastSpawn(server, o.networkedID, "tile", new Vector3(x, 0, z), Quaternion.identity);
+                // Server.BroadcastSpawn(server, o.networkedID, "tile", new Vector3(x, 0, z), Quaternion.identity);
             }
         }
     }
@@ -71,17 +83,24 @@ public class GridManager : MonoBehaviour
         generatedSquares.Add(position, tile);
     }
 
-    /*    private NetworkedObject GenerateTileOnPosition(uint networkedID, int x, int z)
-        {
-            return NetworkManager.Instance.Create(0, "tile", true, new Vector3(x, 0, z), Quaternion.identity);
+    private NetworkedObject GenerateTileOnPosition(uint networkedID, int x, int z)
+    {
+        return NetworkManager.Instance.Create(0, "tile", true, new Vector3(x, 0, z), Quaternion.identity);
 
-            Vector3Int position = new Vector3Int(x, 0, z);
-            GridTileSquare tile = Instantiate(tilePrefab, position, Quaternion.identity, transform);
-            tile.z = (uint)position.z;
-            tile.x = (uint)position.x;
-            tile.networkedID = networkedID;
-            generatedSquares.Add(position, tile);
-        }*/
+        Vector3Int position = new Vector3Int(x, 0, z);
+        GridTileSquare tile = Instantiate(tilePrefab, position, Quaternion.identity, transform);
+        tile.z = (uint)position.z;
+        tile.x = (uint)position.x;
+        tile.networkedID = networkedID;
+        generatedSquares.Add(position, tile);
+    }
+
+    public override void OnCreate()
+    {
+        base.OnCreate();
+
+        OnGameStart();
+    }
 
     private void GenerateItem()
     {
@@ -176,5 +195,11 @@ public class GridManager : MonoBehaviour
                 Debug.Log($"Removed tile at {v}");
             }
         }
+    }
+
+    public static void TryAddTile(GridTileSquare tile)
+    {
+        if (!generatedSquares.ContainsKey(new Vector3Int((int)tile.x, 0, (int)tile.z)))
+            generatedSquares.Add(new Vector3Int((int)tile.x, 0, (int)tile.z), tile);
     }
 }

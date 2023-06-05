@@ -20,7 +20,9 @@ public enum NetworkMessageType
     REMOTE_PLAYER_JOINED = 7,
     GAME_START = 8,
     SPAWN_OBJECT = 9,
-    DESTROY_OBJECT = 10
+    DESTROY_OBJECT = 10,
+    SEND_ITEM_USE = 11,
+    RECEIVE_ITEM_USE = 12
 }
 
 public class Server : MonoBehaviour
@@ -29,6 +31,7 @@ public class Server : MonoBehaviour
             { NetworkMessageType.PLAYER_JOINED, HandleClientJoined },
             { NetworkMessageType.PLAYER_MOVED, HandlePlayerMoved },
             { NetworkMessageType.PLAYER_QUIT, HandleClientExit },
+            { NetworkMessageType.SEND_ITEM_USE, HandleItemUse },
         };
 
     public Button startButton;
@@ -36,6 +39,7 @@ public class Server : MonoBehaviour
 
     private NativeList<NetworkConnection> m_Connections;
     private Dictionary<NetworkConnection, uint> nameList = new Dictionary<NetworkConnection, uint>();
+
     private static bool isStarted;
     private static int callsThisFrame = 0;
 
@@ -43,7 +47,7 @@ public class Server : MonoBehaviour
     {
         StartServer();
         m_Connections = new NativeList<NetworkConnection>(16, Allocator.Persistent);
-        if (startButton != null) startButton.onClick.AddListener(() => BroadcastGameStart(this));
+        if (startButton != null) startButton.onClick.AddListener(StartGame);
     }
 
     private void StartServer()
@@ -58,6 +62,16 @@ public class Server : MonoBehaviour
             m_Driver.Listen();
     }
 
+    private void StartGame()
+    {
+        // Cast unnecessary
+        string gridManagerKey = "gridmanager";
+        NetworkedObject gridManager = NetworkManager.Instance.Create(0, gridManagerKey, true, Vector3.zero, Quaternion.identity);
+        uint objectID = gridManager.networkedID;
+        BroadcastSpawn(this, objectID, gridManagerKey, Vector3.zero, Quaternion.identity);
+        BroadcastGameStart(this);
+    }
+
     private void Update()
     {
         m_Driver.ScheduleUpdate().Complete();
@@ -68,7 +82,6 @@ public class Server : MonoBehaviour
         callsThisFrame = 0;
 
         // If all players are ready or other game start condition
-        
     }
 
     private void HandleMessages()
@@ -207,6 +220,24 @@ public class Server : MonoBehaviour
         }
     }
 
+    private static void HandleItemUse(object handler, NetworkConnection connection, DataStreamReader stream)
+    {
+        Server serv = (Server) handler;
+
+        uint playerID = stream.ReadUInt();
+        int itemID = stream.ReadInt();
+
+        foreach(NetworkConnection opponent in serv.nameList.Keys)
+        {
+            DataStreamWriter writer;
+            serv.m_Driver.BeginSend(NetworkPipeline.Null, opponent, out writer);
+            writer.WriteUInt((uint)NetworkMessageType.RECEIVE_ITEM_USE);       
+            writer.WriteUInt(playerID);                            
+            writer.WriteInt(itemID);                              
+            serv.m_Driver.EndSend(writer);
+        }
+    }
+
     private static void TrySpawnItem(Server serv)
     {
         int itemID = ItemSpawner.Instance.TryGetItem();
@@ -327,7 +358,7 @@ public class Server : MonoBehaviour
 
         foreach (NetworkConnection connection in serv.nameList.Keys)
         {
-            if (connection == serv.nameList.Keys.ToArray()[0]) return;
+            if (connection == serv.nameList.Keys.ToArray()[0]) continue;
 
             int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, connection, out var writer);
             callsThisFrame++;

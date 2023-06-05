@@ -121,4 +121,4 @@ MonoBehaviour:
   playerID: 0
   walkDuration: 0.5
   possibleTiles: []
-  currentItem: {fileID: 11400000, guid: c53da75cb3000a742977e840c3621bf6, type: 2}
+  currentItem: {fileID: 11400000, guid: d12d4ca88d2b30f47b441a0ace23b228, type: 2}

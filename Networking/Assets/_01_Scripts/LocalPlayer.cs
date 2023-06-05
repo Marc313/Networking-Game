@@ -25,7 +25,10 @@ public class LocalPlayer : APlayer
         {
             Debug.Log("Used item!");
             currentItem.Use(this);
-            currentItem = null;
+
+            FindObjectOfType<Client>().OnUseItem(currentItem);
+            // Send Item use;
+            //currentItem = null;
         }
     }
 

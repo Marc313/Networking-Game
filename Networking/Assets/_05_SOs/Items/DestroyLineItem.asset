@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b52566257a280d4da323762bc50d21a, type: 3}
   m_Name: DestroyLineItem
   m_EditorClassIdentifier: 
-  itemID: 1
+  itemID: 0
   itemEventType: DestroyRangeEvent

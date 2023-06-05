@@ -28,6 +28,8 @@ public class NetworkManager : Singleton<NetworkManager>
         newObject.networkedID = id == 0 ? GetNextID : id;
         newObject.isServer = isServer;
         objects.Add(newObject.networkedID, newObject);
+        newObject.OnCreate();
+
         return newObject;
     }
 
