@@ -8,7 +8,7 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/_02_Scenes/ChatDemo.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
-  - enabled: 1
+  - enabled: 0
     path: Assets/_02_Scenes/Login Page.unity
     guid: 2989d10e4c6dbee4dac8f2d8ba13ff47
   - enabled: 1

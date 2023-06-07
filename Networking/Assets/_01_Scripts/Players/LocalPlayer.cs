@@ -21,10 +21,10 @@ public class LocalPlayer : APlayer
     private void Update()
     {
         // Check for use item input if player has turn.
-        if (Input.GetKeyDown(KeyCode.Mouse1))
+        if (Input.GetKeyDown(KeyCode.I))
         {
             Debug.Log("Used item!");
-            currentItem.Use(this);
+            //currentItem.Use(this);  // Illegal
 
             FindObjectOfType<Client>().OnUseItem(currentItem);
             // Send Item use;
@@ -32,11 +32,11 @@ public class LocalPlayer : APlayer
         }
     }
 
-    public override void SetPosition(Vector3 position)
+    public override void SetPosition(Vector3 position, bool hasTurn)
     {
         EventSystem.RaiseEvent(EventName.LOCAL_MOVE_SENT);
-        base.SetPosition(position);
-        ShowPossibleMoves();
+        base.SetPosition(position, hasTurn);
+        if (hasTurn) ShowPossibleMoves();
     }
 
     public void OnReceiveTurn()

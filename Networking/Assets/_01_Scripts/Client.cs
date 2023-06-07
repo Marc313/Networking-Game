@@ -1,5 +1,6 @@
 ﻿using MarcoHelpers;
 using System;
+using System.Collections.Generic;
 using Unity.Networking.Transport;
 using UnityEngine;
 using UnityEngine.Networking.Types;
@@ -10,12 +11,12 @@ public class Client : MonoBehaviour
     public NetworkDriver networkDriver;
     public NetworkConnection connection;
 
-    // To character manager?
+    // To player manager?
     public LocalPlayer localPlayerPrefab;
     public RemotePlayer remotePlayerPrefab;
 
     private LocalPlayer localPlayer;
-    private RemotePlayer[] remotePlayers = new RemotePlayer[3];
+    private Dictionary<uint, RemotePlayer> remotePlayers = new Dictionary<uint, RemotePlayer>();
 
     private bool isDoneConnecting;
     private uint playerID;
@@ -193,7 +194,7 @@ public class Client : MonoBehaviour
 
         if (remotePlayers[opponentPlayerID] == null)
         {
-            CreateRemotePlayer((int)opponentPlayerID);
+            CreateRemotePlayer(opponentPlayerID);
         }
 
         uint playerX = reader.ReadUInt();
@@ -210,7 +211,7 @@ public class Client : MonoBehaviour
 
     private void HandleReceivePlayerID(DataStreamReader reader)
     {
-        FindObjectOfType<GridManager>().OnGameStart();
+        //FindObjectOfType<GridManager>().OnGameStart();
         playerID = reader.ReadUInt();
         Debug.Log($"Client: Received ID of " + playerID);
 
@@ -224,7 +225,7 @@ public class Client : MonoBehaviour
         {
             for (int previousID = (int)playerID - 1; previousID >= 0; previousID--)
             {
-                CreateRemotePlayer(previousID);
+                CreateRemotePlayer((uint)previousID);
             }
         }
 
@@ -233,7 +234,7 @@ public class Client : MonoBehaviour
     private void HandleRemotePlayerJoined(DataStreamReader reader)
     {
         uint remotePlayerID = reader.ReadUInt();
-        CreateRemotePlayer((int)remotePlayerID);
+        CreateRemotePlayer(remotePlayerID);
     }
 
     private void CreateLocalPlayer()
@@ -243,11 +244,11 @@ public class Client : MonoBehaviour
         localPlayer.playerID = (int) playerID;
     }
 
-    private void CreateRemotePlayer(int remotePlayerID)
+    private void CreateRemotePlayer(uint remotePlayerID)
     {
-        Vector3Int playerStartPos = GridManager.GetPlayerStartPos(remotePlayerID);
-        remotePlayers[remotePlayerID] = Instantiate(remotePlayerPrefab, playerStartPos, Quaternion.identity);
-        remotePlayers[remotePlayerID].playerID = remotePlayerID;
+        Vector3Int playerStartPos = GridManager.GetPlayerStartPos((int) remotePlayerID);
+        remotePlayers.Add(remotePlayerID, Instantiate(remotePlayerPrefab, playerStartPos, Quaternion.identity));
+        remotePlayers[remotePlayerID].playerID = (int) remotePlayerID;
 
         Debug.LogError($"Created player {remotePlayerID} at {playerStartPos}");
     }
@@ -278,10 +279,10 @@ public class Client : MonoBehaviour
 
     private void SwapPlayerPositions(object value = null)
     {
-        RemotePlayer randomRemote = remotePlayers.GetRandomEntry();
+        RemotePlayer randomRemote = remotePlayers.Values.GetRandomEntry();
         Vector3 remotePos = randomRemote.transform.position;
-        randomRemote.SetPosition(localPlayer.transform.position);
-        localPlayer.SetPosition(remotePos);
+        randomRemote.SetPosition(localPlayer.transform.position, false);
+        localPlayer.SetPosition(remotePos, true);
     }
 
     public void OnUseItem(Item currentItem)

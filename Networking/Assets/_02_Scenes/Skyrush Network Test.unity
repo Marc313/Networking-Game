@@ -267,17 +267,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5779313875170595638, guid: 0580f69f532524d45afd266d80d12536, type: 3}
   m_PrefabInstance: {fileID: 79491812}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &132651159 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 6851945614029227441, guid: 6e89132a3b0e9284fa7b553d3bd33b2f, type: 3}
-  m_PrefabInstance: {fileID: 6851945614145101094}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ef37d7f0f271b1d4282ed05f24080f8e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1001 &167567350
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -757,7 +746,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 132651159}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: GridManager, Assembly-CSharp
         m_MethodName: OnGameStart
         m_Mode: 1
@@ -1742,7 +1731,7 @@ Transform:
   - {fileID: 656193256}
   - {fileID: 1870165208}
   m_Father: {fileID: 0}
-  m_RootOrder: 6
+  m_RootOrder: 5
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1082022612
 PrefabInstance:
@@ -2359,7 +2348,7 @@ Transform:
   m_Children:
   - {fileID: 234598593}
   m_Father: {fileID: 0}
-  m_RootOrder: 7
+  m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1551936566
 GameObject:
@@ -2997,13 +2986,17 @@ PrefabInstance:
       propertyPath: m_Name
       value: GridManager
       objectReference: {fileID: 0}
+    - target: {fileID: 6851945614029227440, guid: 6e89132a3b0e9284fa7b553d3bd33b2f, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6851945614029227441, guid: 6e89132a3b0e9284fa7b553d3bd33b2f, type: 3}
       propertyPath: server
       value: 
       objectReference: {fileID: 459537798}
     - target: {fileID: 6851945614029227454, guid: 6e89132a3b0e9284fa7b553d3bd33b2f, type: 3}
       propertyPath: m_RootOrder
-      value: 5
+      value: 7
       objectReference: {fileID: 0}
     - target: {fileID: 6851945614029227454, guid: 6e89132a3b0e9284fa7b553d3bd33b2f, type: 3}
       propertyPath: m_LocalPosition.x

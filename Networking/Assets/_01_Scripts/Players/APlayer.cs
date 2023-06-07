@@ -19,7 +19,7 @@ public abstract class APlayer : MovingObject
         currentPosition = position;
     }
 
-    public virtual void SetPosition(Vector3 position)
+    public virtual void SetPosition(Vector3 position, bool hasTurn)
     {
         transform.position = position;
         currentPosition = position.ToVector3Int();

@@ -9,6 +9,7 @@ public class GridTileSquare : NetworkedObject, IPointerClickHandler, IPointerEnt
     public Material defaultMaterial;
 
     private bool isPossibleMove;
+    private bool isDisappeared;
 
     private void OnEnable() => MarcoHelpers.EventSystem.Subscribe(EventName.LOCAL_MOVE_SENT, ResetMovePossibility);
     private void OnDisable() => MarcoHelpers.EventSystem.Unsubscribe(EventName.LOCAL_MOVE_SENT, ResetMovePossibility);
@@ -51,7 +52,9 @@ public class GridTileSquare : NetworkedObject, IPointerClickHandler, IPointerEnt
     public void Disappear()
     {
         // Move down
-        gameObject.SetActive(false);
+        gameObject.GetComponent<MeshRenderer>().enabled = false;
+        isDisappeared = true;
+        // gameObject.SetActive(false);
     }
 
     public void MarkAsPossibleMove()

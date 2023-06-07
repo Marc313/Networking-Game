@@ -42,6 +42,7 @@ public class Server : MonoBehaviour
 
     private static bool isStarted;
     private static int callsThisFrame = 0;
+    private static uint currentPlayerWithTurn;
 
     private void Start()
     {
@@ -191,6 +192,7 @@ public class Server : MonoBehaviour
                     if (opponent == connection) continue;
 
                     uint nextPlayerID = (uint)GetNextPlayerID(serv.nameList[connection], serv.nameList.Count);
+                    currentPlayerWithTurn = nextPlayerID;
 
                     serv.m_Driver.BeginSend(NetworkPipeline.Null, opponent, out writer);
                     writer.WriteUInt((uint) NetworkMessageType.SEND_OPPONENT_CHOICE);       // Message Type
@@ -227,14 +229,21 @@ public class Server : MonoBehaviour
         uint playerID = stream.ReadUInt();
         int itemID = stream.ReadInt();
 
-        foreach(NetworkConnection opponent in serv.nameList.Keys)
+        if (playerID == currentPlayerWithTurn)
         {
-            DataStreamWriter writer;
-            serv.m_Driver.BeginSend(NetworkPipeline.Null, opponent, out writer);
-            writer.WriteUInt((uint)NetworkMessageType.RECEIVE_ITEM_USE);       
-            writer.WriteUInt(playerID);                            
-            writer.WriteInt(itemID);                              
-            serv.m_Driver.EndSend(writer);
+            foreach (NetworkConnection player in serv.nameList.Keys)
+            {
+                DataStreamWriter writer;
+                serv.m_Driver.BeginSend(NetworkPipeline.Null, player, out writer);
+                writer.WriteUInt((uint)NetworkMessageType.RECEIVE_ITEM_USE);
+                writer.WriteUInt(playerID);
+                writer.WriteInt(itemID);
+                serv.m_Driver.EndSend(writer);
+            }
+        }
+        else
+        {
+            Debug.LogError("Item use blokked, not players turn");
         }
     }
 
