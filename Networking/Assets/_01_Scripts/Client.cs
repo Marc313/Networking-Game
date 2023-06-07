@@ -1,22 +1,12 @@
 ﻿using MarcoHelpers;
 using System;
-using System.Collections.Generic;
 using Unity.Networking.Transport;
 using UnityEngine;
-using UnityEngine.Networking.Types;
-using UnityEngine.UIElements;
 
 public class Client : MonoBehaviour
 {
     public NetworkDriver networkDriver;
     public NetworkConnection connection;
-
-    // To player manager?
-    public LocalPlayer localPlayerPrefab;
-    public RemotePlayer remotePlayerPrefab;
-
-    private LocalPlayer localPlayer;
-    private Dictionary<uint, RemotePlayer> remotePlayers = new Dictionary<uint, RemotePlayer>();
 
     private bool isDoneConnecting;
     private uint playerID;
@@ -31,16 +21,6 @@ public class Client : MonoBehaviour
         var endpoint = NetworkEndPoint.LoopbackIpv4;
         endpoint.Port = 9000;
         connection = networkDriver.Connect(endpoint);
-    }
-
-    private void OnEnable()
-    {
-        EventSystem.Subscribe(EventName.PLAYERS_SWAP, SwapPlayerPositions);
-    }
-
-    private void OnDisable()
-    {
-        EventSystem.Unsubscribe(EventName.PLAYERS_SWAP, SwapPlayerPositions);
     }
 
     public void OnDestroy()
@@ -102,6 +82,7 @@ public class Client : MonoBehaviour
         Debug.Log($"Sending new position: ({x}, {y})");
         networkDriver.BeginSend(connection, out var writer);
         writer.WriteUInt(messageType);
+        writer.WriteUInt(playerID);
         writer.WriteUInt(x);
         writer.WriteUInt(y);
         networkDriver.EndSend(writer);
@@ -109,7 +90,7 @@ public class Client : MonoBehaviour
         UIManager.Instance.SetTurnText(hasTurn);
 
         MarkTile(x, y);
-        localPlayer.MoveToTile(new Vector3Int((int) x, 0, (int) y));
+        PlayerManager.Instance.GetLocalPlayer().MoveToTile(new Vector3Int((int) x, 0, (int) y));
         EventSystem.RaiseEvent(EventName.LOCAL_MOVE_SENT);
     }
 
@@ -184,7 +165,7 @@ public class Client : MonoBehaviour
     private void ReceiveTurn()
     {
         hasTurn = true;
-        localPlayer.OnReceiveTurn();
+        PlayerManager.Instance.GetLocalPlayer().OnReceiveTurn();
         UIManager.Instance.SetTurnText(hasTurn);
     }
 
@@ -192,16 +173,16 @@ public class Client : MonoBehaviour
     {
         uint opponentPlayerID = reader.ReadUInt();
 
-        if (remotePlayers[opponentPlayerID] == null)
+        if (PlayerManager.Instance.GetRemotePlayer(opponentPlayerID) == null)
         {
-            CreateRemotePlayer(opponentPlayerID);
+            PlayerManager.Instance.CreateRemotePlayer(opponentPlayerID, Vector3Int.zero);
         }
 
         uint playerX = reader.ReadUInt();
         uint playerY = reader.ReadUInt();
         uint nextPlayerID = reader.ReadUInt();
         Debug.LogError($"Client: Player {opponentPlayerID} moved to {playerX}, {playerY}");
-        remotePlayers[opponentPlayerID].MoveToTile(new Vector3Int((int)playerX, 0, (int)playerY));
+        PlayerManager.Instance.GetRemotePlayer(opponentPlayerID).MoveToTile(new Vector3Int((int)playerX, 0, (int)playerY));
 
         if (playerID == nextPlayerID)
         {
@@ -215,7 +196,7 @@ public class Client : MonoBehaviour
         playerID = reader.ReadUInt();
         Debug.Log($"Client: Received ID of " + playerID);
 
-        CreateLocalPlayer();
+        PlayerManager.Instance.CreateLocalPlayer(playerID, Vector3Int.zero);
 
         isDoneConnecting = true;
         UIManager.Instance.SetTurnText(hasTurn);
@@ -225,7 +206,7 @@ public class Client : MonoBehaviour
         {
             for (int previousID = (int)playerID - 1; previousID >= 0; previousID--)
             {
-                CreateRemotePlayer((uint)previousID);
+                PlayerManager.Instance.CreateRemotePlayer((uint)previousID, Vector3Int.zero);
             }
         }
 
@@ -234,23 +215,7 @@ public class Client : MonoBehaviour
     private void HandleRemotePlayerJoined(DataStreamReader reader)
     {
         uint remotePlayerID = reader.ReadUInt();
-        CreateRemotePlayer(remotePlayerID);
-    }
-
-    private void CreateLocalPlayer()
-    {
-        Vector3Int playerStartPos = GridManager.GetPlayerStartPos((int)playerID);
-        localPlayer = Instantiate(localPlayerPrefab, playerStartPos, Quaternion.identity);
-        localPlayer.playerID = (int) playerID;
-    }
-
-    private void CreateRemotePlayer(uint remotePlayerID)
-    {
-        Vector3Int playerStartPos = GridManager.GetPlayerStartPos((int) remotePlayerID);
-        remotePlayers.Add(remotePlayerID, Instantiate(remotePlayerPrefab, playerStartPos, Quaternion.identity));
-        remotePlayers[remotePlayerID].playerID = (int) remotePlayerID;
-
-        Debug.LogError($"Created player {remotePlayerID} at {playerStartPos}");
+        PlayerManager.Instance.CreateRemotePlayer(remotePlayerID, Vector3Int.zero);
     }
 
     private void SendHandshake()
@@ -277,14 +242,6 @@ public class Client : MonoBehaviour
         FindObjectOfType<GridManager>().MarkTile(x, y);
     }
 
-    private void SwapPlayerPositions(object value = null)
-    {
-        RemotePlayer randomRemote = remotePlayers.Values.GetRandomEntry();
-        Vector3 remotePos = randomRemote.transform.position;
-        randomRemote.SetPosition(localPlayer.transform.position, false);
-        localPlayer.SetPosition(remotePos, true);
-    }
-
     public void OnUseItem(Item currentItem)
     {
         uint messageType = (uint)NetworkMessageType.SEND_ITEM_USE;
@@ -302,7 +259,7 @@ public class Client : MonoBehaviour
         int itemID = reader.ReadInt();
 
         // Use playermanager and itemmanager.
-        APlayer player = itemUserID == playerID ? localPlayer : remotePlayers[itemUserID];
+        APlayer player = PlayerManager.Instance.GetPlayer(itemUserID);
         ItemSpawner.Instance.GetItemWithID(itemID).Use(player);
     }
 }

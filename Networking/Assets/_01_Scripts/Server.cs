@@ -165,12 +165,20 @@ public class Server : MonoBehaviour
 
     private static void HandlePlayerMoved(object handler, NetworkConnection connection, DataStreamReader stream)
     {
+        Server serv = handler as Server;
+
         // Pop message
+        uint playerID = stream.ReadUInt();
         uint playerX = stream.ReadUInt();
         uint playerY = stream.ReadUInt();
         Debug.Log($"Received Message: ({playerX}, {playerY})");
 
-        Server serv = handler as Server;
+        // Check Move validity & Imitate Outcome
+        Vector3Int movingPosition = new Vector3Int((int) playerX, 0, (int) playerY);
+        if (GridManager.GetNeighboursOfPosition(movingPosition).Count == 0)
+        {
+            Debug.Log($"PLAYER {playerID} LOST");
+        }
 
         if (serv.nameList.ContainsKey(connection))
         {
@@ -191,7 +199,7 @@ public class Server : MonoBehaviour
                 {
                     if (opponent == connection) continue;
 
-                    uint nextPlayerID = (uint)GetNextPlayerID(serv.nameList[connection], serv.nameList.Count);
+                    uint nextPlayerID = (uint)GetNextPlayerID(playerID, serv.nameList.Count);
                     currentPlayerWithTurn = nextPlayerID;
 
                     serv.m_Driver.BeginSend(NetworkPipeline.Null, opponent, out writer);
