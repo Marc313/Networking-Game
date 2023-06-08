@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 // Subclasses: LocalPlayer, RemotePlayer
 public abstract class APlayer : MovingObject
@@ -22,6 +23,16 @@ public abstract class APlayer : MovingObject
     public virtual void SetPosition(Vector3 position, bool hasTurn)
     {
         transform.position = position;
-        currentPosition = position.ToVector3Int();
+        currentPosition = (position + Vector3.up).ToVector3Int() ;
+    }
+
+    public void TryObtainItem(Item item)
+    {
+        if (this is LocalPlayer)
+        {
+            (this as LocalPlayer).ObtainItem(item);
+        }
+
+        // TODO: Send to server that item is in possession
     }
 }

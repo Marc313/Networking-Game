@@ -138,7 +138,9 @@ public class GridManager : NetworkedObject
                 Vector3Int newPos = new Vector3Int(position.x + x, 0, position.z + z);
                 if (generatedSquares.ContainsKey(newPos))
                 {
-                    neighbours.Add(generatedSquares[newPos]);
+                    GridTileSquare neighbour = generatedSquares[newPos];
+                    if (!neighbour.isDisappeared)
+                        neighbours.Add(generatedSquares[newPos]);
                 }
             }
         }

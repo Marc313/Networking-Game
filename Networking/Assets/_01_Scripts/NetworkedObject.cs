@@ -9,4 +9,9 @@ public class NetworkedObject : MonoBehaviour
     {
 
     }
+
+    public void RPCExecute(string methodName, params object[] data)
+    {
+        NetworkManager.Instance.SendRPCMessage(this, methodName, data);
+    }
 }

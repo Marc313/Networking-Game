@@ -44,4 +44,21 @@ public class NetworkManager : Singleton<NetworkManager>
         }
         return false;
     }
+
+    public bool GetObject(uint id, out NetworkedObject networkedObject)
+    {
+        if (objects.ContainsKey(id))
+        {
+            networkedObject = objects[id];
+            return true;
+        }
+
+        networkedObject = null;
+        return false;
+    }
+
+    public void SendRPCMessage(NetworkedObject target, string methodName, params object[] data)
+    {
+        FindObjectOfType<Client>().SendRPCMessage(target, methodName, data);
+    }
 }

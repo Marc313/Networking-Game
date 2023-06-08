@@ -1,7 +1,7 @@
 using System.Threading.Tasks;
 using UnityEngine;
 
-public class MovingObject : MonoBehaviour
+public class MovingObject : NetworkedObject
 {
     public AnimationCurve rotationCurve;
 

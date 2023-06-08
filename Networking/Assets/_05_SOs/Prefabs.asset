@@ -13,8 +13,10 @@ MonoBehaviour:
   m_Name: Prefabs
   m_EditorClassIdentifier: 
   prefabs:
-  - key: player
-    networkedObject: {fileID: 0}
+  - key: localPlayer
+    networkedObject: {fileID: 7977965561915791185, guid: 8408c3d0030d39e45ae90ef7f1617326, type: 3}
+  - key: remotePlayer
+    networkedObject: {fileID: -428126393148544595, guid: 121ab91124f4bf04e9ec7071aa49d428, type: 3}
   - key: tile
     networkedObject: {fileID: -6932337553477601679, guid: 0580f69f532524d45afd266d80d12536, type: 3}
   - key: item0

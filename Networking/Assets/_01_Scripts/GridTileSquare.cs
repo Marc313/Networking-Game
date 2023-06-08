@@ -8,8 +8,8 @@ public class GridTileSquare : NetworkedObject, IPointerClickHandler, IPointerEnt
     public Material clickedMaterial;
     public Material defaultMaterial;
 
+    public bool isDisappeared;
     private bool isPossibleMove;
-    private bool isDisappeared;
 
     private void OnEnable() => MarcoHelpers.EventSystem.Subscribe(EventName.LOCAL_MOVE_SENT, ResetMovePossibility);
     private void OnDisable() => MarcoHelpers.EventSystem.Unsubscribe(EventName.LOCAL_MOVE_SENT, ResetMovePossibility);

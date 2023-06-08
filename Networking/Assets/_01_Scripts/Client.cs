@@ -1,4 +1,5 @@
-﻿using MarcoHelpers;
+﻿using ChatClientExample;
+using MarcoHelpers;
 using System;
 using Unity.Networking.Transport;
 using UnityEngine;
@@ -106,33 +107,56 @@ public class Client : MonoBehaviour
         }
     }
 
+    public void SendRPCMessage(NetworkedObject target, string methodName, object[] data)
+    {
+        RPCMessage message = new RPCMessage(target, methodName, data);
+        uint messageType = (uint)NetworkMessageType.RPC_MESSAGE;
+
+        networkDriver.BeginSend(connection, out var writer);
+        writer.WriteUInt(messageType);
+        message.SerializeObject(ref writer);
+
+        networkDriver.EndSend(writer);
+    }
+
     private void ReceiveMessages(DataStreamReader stream)
     {
         uint messageType = stream.ReadUInt();
 
-        if (messageType == (uint) NetworkMessageType.SEND_OPPONENT_CHOICE)
+        switch (messageType)
         {
-            HandleOpponentTurn(stream);
-        }
-        else if (messageType == (uint) NetworkMessageType.SEND_PLAYER_ID)
-        {
-            HandleReceivePlayerID(stream);
-        }
-        else if (messageType == (uint) NetworkMessageType.REMOTE_PLAYER_JOINED)
-        {
-            HandleRemotePlayerJoined(stream);
-        }
-        else if (messageType == (uint) NetworkMessageType.GAME_START)
-        {
-            HandleGameStart(stream);
-        }
-        else if (messageType == (uint) NetworkMessageType.SPAWN_OBJECT)
-        {
-            HandleSpawnObject(stream);
-        }
-        else if (messageType == (uint) NetworkMessageType.RECEIVE_ITEM_USE) 
-        {
-            HandleReceiveItem(stream);
+            case (uint)NetworkMessageType.SEND_OPPONENT_CHOICE:
+                HandleOpponentTurn(stream);
+                break;
+            case (uint)NetworkMessageType.MOVE_CONFIRM:
+                break;
+            case (uint)NetworkMessageType.SEND_PLAYER_ID:
+                HandleReceivePlayerID(stream);
+                break;
+            case (uint)NetworkMessageType.REMOTE_PLAYER_JOINED:
+                HandleRemotePlayerJoined(stream);
+                break;
+            case (uint)NetworkMessageType.GAME_START:
+                HandleGameStart(stream);
+                break;
+            case (uint)NetworkMessageType.SPAWN_OBJECT:
+                HandleSpawnObject(stream);
+                break;
+            case (uint)NetworkMessageType.RECEIVE_ITEM_USE:
+                HandleReceiveItemUsage(stream);
+                break;
+            case (uint)NetworkMessageType.RECEIVE_ITEM:
+                HandleObtainItem(stream);
+                break;
+            case (uint)NetworkMessageType.RPC_MESSAGE:
+                HandleRPCMessage(stream);
+                break;
+            case (uint)NetworkMessageType.SEND_GAME_RESULT:
+                HandleGameEnd(stream);
+                break;
+            default:
+                Debug.LogError($"Unrecognized network message: {((NetworkMessageType)messageType).ToString()}");
+                break;
         }
     }
 
@@ -160,6 +184,22 @@ public class Client : MonoBehaviour
         {
             ReceiveTurn();
         }
+    }
+
+    private void HandleGameEnd(DataStreamReader reader)
+    {
+        uint winnerID = reader.ReadUInt();
+
+        if (winnerID == playerID)
+        {
+            UIManager.Instance.ShowWinScreen();
+        }
+        else
+        {
+            UIManager.Instance.ShowLoseScreen(winnerID);
+        }
+
+        // Load Home scene after 5 seconds or button
     }
 
     private void ReceiveTurn()
@@ -225,6 +265,7 @@ public class Client : MonoBehaviour
 
         networkDriver.BeginSend(connection, out var writer);
         writer.WriteUInt(messageType);
+        writer.WriteUInt(AccountManager.playerID);
         networkDriver.EndSend(writer);
     }
 
@@ -253,7 +294,16 @@ public class Client : MonoBehaviour
         networkDriver.EndSend(writer);
     }
 
-    private void HandleReceiveItem(DataStreamReader reader)
+    private void HandleObtainItem(DataStreamReader reader)
+    {
+        int itemID = reader.ReadInt();
+
+        // Use playermanager and itemmanager.
+        Item item = ItemSpawner.Instance.GetItemWithID(itemID);
+        PlayerManager.Instance.GetLocalPlayer().ObtainItem(item);
+    }
+
+    private void HandleReceiveItemUsage(DataStreamReader reader)
     {
         uint itemUserID = reader.ReadUInt();
         int itemID = reader.ReadInt();
@@ -261,5 +311,21 @@ public class Client : MonoBehaviour
         // Use playermanager and itemmanager.
         APlayer player = PlayerManager.Instance.GetPlayer(itemUserID);
         ItemSpawner.Instance.GetItemWithID(itemID).Use(player);
+    }
+
+    private void HandleRPCMessage(DataStreamReader stream)
+    {
+        RPCMessage message = new RPCMessage();
+        message.DeserializeObject(ref stream);
+
+        try
+        {
+            message.mInfo.Invoke(message.target, message.data);
+        }
+        catch (Exception e)
+        {
+            Debug.Log(e.Message);
+            Debug.Log(e.StackTrace);
+        }
     }
 }

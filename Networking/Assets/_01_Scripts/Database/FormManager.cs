@@ -7,7 +7,6 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using static System.Net.WebRequestMethods;
 
 // Form and menu manager in one ;)
 public class FormManager : MonoBehaviour
@@ -33,10 +32,6 @@ public class FormManager : MonoBehaviour
     public GameObject recentScoresParent;
     public GameObject recentScorePrefab;
 
-    // Make account manager
-    private string userMail;
-    private string userName = "johannes";
-
     private void Start()
     {
         login_submitButton.onClick.AddListener(SubmitLogin);
@@ -50,10 +45,13 @@ public class FormManager : MonoBehaviour
 
         if (CheckErrors(response))
         {
+            JObject user = JObject.Parse(response);
+            AccountManager.playerID = (uint) user["id"];
+            AccountManager.userName = (string) user["name"];
+            AccountManager.userMail = (string) user["email"];
+
             login_menu.SetActive(false);
             home_menu.SetActive(true);
-
-            userName = login_mailField.text;
         }
         else
         {
@@ -71,7 +69,7 @@ public class FormManager : MonoBehaviour
             register_menu.SetActive(false);
             home_menu.SetActive(true);
 
-            userName = register_usernameField.text;
+            // userName = register_usernameField.text;
         }
         else
         {
@@ -81,18 +79,23 @@ public class FormManager : MonoBehaviour
 
     public async void LoadDefaultScores()
     {
-        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/recentplayersscores.php?username={userName}";
+        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/recentplayersscores.php?username={AccountManager.userName}";
         string response = await PostURL(phpUrl);
 
         if (CheckErrors(response))
         {
-            //scoreTextField.text = response;
             ParseScores(response);
         }
         else
         {
             scoreTextField.text = "Something went wrong, try again later";
         }
+    }
+
+    public async void InsertScore(int player1ID, int player2ID, int winnerID)
+    {
+        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/scoreinsert.php?player1_id={player1ID}&player2_id={player2ID}&winner_id={winnerID}";
+        string response = await PostURL(phpUrl);
     }
 
     private async Task<string> PostURL(string phpUrl)
@@ -152,11 +155,6 @@ public class FormManager : MonoBehaviour
                 {
                     Debug.Log("Login failed!");
                 }
-
-/*              // We're probably expecting something in return:
-                // JObject json = JObject.Parse(www.downloadHandler.text);
-                // int sessionID = (int)json["sessionid"];
-                // Debug.Log("Login Complete!");*/
             }
         }
 
@@ -193,7 +191,9 @@ public class FormManager : MonoBehaviour
                 string date = (string)score["date_time"];
                 string wins = (string)score["score"];
 
-                Instantiate(recentScorePrefab, recentScoresParent.transform).GetComponent<RecentScoreTemplate>().DisplayData(userName, wins, date);
+                Instantiate(recentScorePrefab, recentScoresParent.transform)
+                    .GetComponent<RecentScoreTemplate>()
+                    .DisplayData(AccountManager.userName, wins, date);
             }
         }
         catch(Exception e)

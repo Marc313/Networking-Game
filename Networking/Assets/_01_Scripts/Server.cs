@@ -1,8 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using ChatClientExample;
+using System.Collections.Generic;
 using System.Linq;
 using Unity.Collections;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Error;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,7 +24,10 @@ public enum NetworkMessageType
     SPAWN_OBJECT = 9,
     DESTROY_OBJECT = 10,
     SEND_ITEM_USE = 11,
-    RECEIVE_ITEM_USE = 12
+    RECEIVE_ITEM_USE = 12,
+    RECEIVE_ITEM = 13,
+    RPC_MESSAGE = 14,
+    SEND_GAME_RESULT = 15
 }
 
 public class Server : MonoBehaviour
@@ -32,13 +37,15 @@ public class Server : MonoBehaviour
             { NetworkMessageType.PLAYER_MOVED, HandlePlayerMoved },
             { NetworkMessageType.PLAYER_QUIT, HandleClientExit },
             { NetworkMessageType.SEND_ITEM_USE, HandleItemUse },
+            { NetworkMessageType.RPC_MESSAGE, HandleRPCMessage }
         };
 
     public Button startButton;
     public NetworkDriver m_Driver;
 
     private NativeList<NetworkConnection> m_Connections;
-    private Dictionary<NetworkConnection, uint> nameList = new Dictionary<NetworkConnection, uint>();
+    private Dictionary<NetworkConnection, uint> connectionList = new Dictionary<NetworkConnection, uint>();
+    private Dictionary<uint, uint> databasePlayerIDs = new Dictionary<uint, uint>();        // Key: Game player ID, Value: Database player ID
 
     private static bool isStarted;
     private static int callsThisFrame = 0;
@@ -123,6 +130,45 @@ public class Server : MonoBehaviour
         }
     }
 
+/*    public static void BroadcastRPCMessage(RPCMessage rpcMessage, Server serv)
+    {
+        DataStreamWriter writer;
+        foreach (NetworkConnection player in serv.nameList.Keys)
+        {
+            serv.m_Driver.BeginSend(NetworkPipeline.Null, player, out writer);
+            rpcMessage.SerializeObject(ref writer);
+            serv.m_Driver.EndSend(writer);
+        }
+    }*/
+
+    private static void HandleRPCMessage(object handler, NetworkConnection connection, DataStreamReader stream)
+    {
+        Server serv = (Server)handler;
+
+        RPCMessage message = new RPCMessage();
+
+        message.DeserializeObject(ref stream);
+
+        try
+        {
+            message.mInfo.Invoke(message.target, message.parameters);
+        }
+        catch (System.Exception e)
+        {
+            Debug.Log(e.Message);
+            Debug.Log(e.StackTrace);
+        }
+
+        DataStreamWriter writer;
+        foreach (NetworkConnection player in serv.connectionList.Keys)
+        {
+            serv.m_Driver.BeginSend(NetworkPipeline.Null, player, out writer);
+            writer.WriteUInt((uint) NetworkMessageType.RPC_MESSAGE);
+            message.SerializeObject(ref writer);
+            serv.m_Driver.EndSend(writer);
+        }
+    }
+
     private static void HandleClientJoined(object handler, NetworkConnection connection, DataStreamReader stream)
     {
         if (isStarted) {
@@ -131,10 +177,12 @@ public class Server : MonoBehaviour
         }
 
         Server serv = handler as Server;
-        uint playerID = (uint) serv.nameList.Count;
+        uint playerID = (uint) serv.connectionList.Count;
+        uint dbPlayerID = stream.ReadUInt();
 
         // Add to list
-        serv.nameList.Add(connection, playerID);
+        serv.connectionList.Add(connection, playerID);
+        serv.databasePlayerIDs.Add(playerID, dbPlayerID);
         Debug.Log("New Client Joined with ID: " + playerID);
 
         // Send player id message back to connection
@@ -157,7 +205,7 @@ public class Server : MonoBehaviour
         }
 
         // Send player joined signal to other connections
-        foreach(NetworkConnection otherConnection in serv.nameList.Keys)
+        foreach(NetworkConnection otherConnection in serv.connectionList.Keys)
         {
             BroadcastPlayerJoined(connection, serv, playerID, otherConnection);
         }
@@ -173,14 +221,24 @@ public class Server : MonoBehaviour
         uint playerY = stream.ReadUInt();
         Debug.Log($"Received Message: ({playerX}, {playerY})");
 
-        // Check Move validity & Imitate Outcome
+        // Check Move validity & Imitate Outcome + Check win condition
         Vector3Int movingPosition = new Vector3Int((int) playerX, 0, (int) playerY);
         if (GridManager.GetNeighboursOfPosition(movingPosition).Count == 0)
         {
-            Debug.Log($"PLAYER {playerID} LOST");
+            // For 2 players a loss also means a win
+            Debug.LogError($"PLAYER {playerID} LOST");
+
+            // Broadcast result
+            uint winnerID = (uint)GetNextPlayerID(playerID, serv.connectionList.Count);
+            BroadcastGameResult(serv, winnerID);
+
+            // Save result in database
+            uint winnerDatabaseID = serv.databasePlayerIDs[winnerID];
+            Debug.LogError($"WINNING PLAYER ID: {winnerDatabaseID}");
+            FindObjectOfType<FormManager>().InsertScore((int)serv.databasePlayerIDs[playerID], (int)winnerDatabaseID, (int)winnerDatabaseID);
         }
 
-        if (serv.nameList.ContainsKey(connection))
+        if (serv.connectionList.ContainsKey(connection))
         {
             // Send confirm message back
             DataStreamWriter writer;
@@ -192,31 +250,13 @@ public class Server : MonoBehaviour
                 writer.WriteUInt((uint)NetworkMessageType.MOVE_CONFIRM);
                 serv.m_Driver.EndSend(writer);
 
-                // TODO: Only send destroy and move
-                // For all other connections:
-                // Send opponent move
-                foreach (NetworkConnection opponent in serv.nameList.Keys)
+                uint nextPlayerID = (uint)GetNextPlayerID(playerID, serv.connectionList.Count);
+                currentPlayerWithTurn = nextPlayerID;
+                SendPlayerMove(connection, serv, nextPlayerID, playerX, playerY, writer);
+
+                if (nextPlayerID == 0)
                 {
-                    if (opponent == connection) continue;
-
-                    uint nextPlayerID = (uint)GetNextPlayerID(playerID, serv.nameList.Count);
-                    currentPlayerWithTurn = nextPlayerID;
-
-                    serv.m_Driver.BeginSend(NetworkPipeline.Null, opponent, out writer);
-                    writer.WriteUInt((uint) NetworkMessageType.SEND_OPPONENT_CHOICE);       // Message Type
-                    writer.WriteUInt(serv.nameList[connection]);                            // PlayerID of player that moved
-                    writer.WriteUInt(playerX);                                              // New x of player
-                    writer.WriteUInt(playerY);                                              // New y of player
-                    writer.WriteUInt(nextPlayerID);                                         // PlayerID of next player
-                    serv.m_Driver.EndSend(writer);
-
-                    //GridManager.GetTile(new Vector3Int((int)playerX, 0, (int)playerY)).Disappear();
-                    //NetworkManager.Instance.Destroy(GridManager.GetTile(new Vector3Int((int)playerX, 0, (int)playerY)).networkedID);
-
-                    if (nextPlayerID == 0)
-                    {
-                        TrySpawnItem(serv);
-                    }
+                    TrySpawnItem(serv);
                 }
             }
             else
@@ -226,7 +266,29 @@ public class Server : MonoBehaviour
         }
         else
         {
-            Debug.LogError($"Received message from unlisted connection");
+            Debug.LogError($"Server: Unrecognized connection!");
+        }
+    }
+
+    private static void SendPlayerMove(NetworkConnection connection, Server serv, uint nextPlayerID, uint playerX, uint playerY, DataStreamWriter writer)
+    {
+        // TODO: Only send destroy and move
+        // For all other connections:
+        // Send opponent move
+        foreach (NetworkConnection opponent in serv.connectionList.Keys)
+        {
+            if (opponent == connection) continue;
+
+            serv.m_Driver.BeginSend(NetworkPipeline.Null, opponent, out writer);
+            writer.WriteUInt((uint)NetworkMessageType.SEND_OPPONENT_CHOICE);       // Message Type
+            writer.WriteUInt(serv.connectionList[connection]);                            // PlayerID of player that moved
+            writer.WriteUInt(playerX);                                              // New x of player
+            writer.WriteUInt(playerY);                                              // New y of player
+            writer.WriteUInt(nextPlayerID);                                         // PlayerID of next player
+            serv.m_Driver.EndSend(writer);
+
+            //GridManager.GetTile(new Vector3Int((int)playerX, 0, (int)playerY)).Disappear();
+            //NetworkManager.Instance.Destroy(GridManager.GetTile(new Vector3Int((int)playerX, 0, (int)playerY)).networkedID);
         }
     }
 
@@ -239,7 +301,7 @@ public class Server : MonoBehaviour
 
         if (playerID == currentPlayerWithTurn)
         {
-            foreach (NetworkConnection player in serv.nameList.Keys)
+            foreach (NetworkConnection player in serv.connectionList.Keys)
             {
                 DataStreamWriter writer;
                 serv.m_Driver.BeginSend(NetworkPipeline.Null, player, out writer);
@@ -302,7 +364,7 @@ public class Server : MonoBehaviour
     {
         Server serv = handler as Server;
 
-        foreach (NetworkConnection connection in serv.nameList.Keys)
+        foreach (NetworkConnection connection in serv.connectionList.Keys)
         {
             int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, connection, out var writer);
 
@@ -322,11 +384,36 @@ public class Server : MonoBehaviour
         }
     }
 
+    private static void BroadcastGameResult(object handler, uint winnerID)
+    {
+        Server serv = handler as Server;
+
+        foreach (NetworkConnection connection in serv.connectionList.Keys)
+        {
+            int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, connection, out var writer);
+
+            // non-0 is an error code
+            if (result == 0)
+            {
+                writer.WriteUInt((uint)NetworkMessageType.SEND_GAME_RESULT);
+                writer.WriteUInt(winnerID);
+
+                serv.m_Driver.EndSend(writer);
+                isStarted = false;
+            }
+            else
+            {
+                Debug.LogError($"Could not write message to driver: {result}", serv);
+            }
+        }
+    }
+
+
     private static void HandleClientExit(object handler, NetworkConnection connection, DataStreamReader stream)
     {
         Server serv = handler as Server;
 
-        if (serv.nameList.ContainsKey(connection))
+        if (serv.connectionList.ContainsKey(connection))
         {
             // Inform all players that a player has left the game. Auto-win ;)
             Debug.Log("Disconnect");
@@ -373,9 +460,9 @@ public class Server : MonoBehaviour
     {
         Server serv = handler as Server;
 
-        foreach (NetworkConnection connection in serv.nameList.Keys)
+        foreach (NetworkConnection connection in serv.connectionList.Keys)
         {
-            if (connection == serv.nameList.Keys.ToArray()[0]) continue;
+            if (connection == serv.connectionList.Keys.ToArray()[0]) continue;
 
             int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, connection, out var writer);
             callsThisFrame++;
@@ -406,5 +493,47 @@ public class Server : MonoBehaviour
                 Debug.LogError($"Could not write message to driver: {(StatusCode) result}", serv);
             }
         }
+    }
+
+    public void BroadcastItemReceive(object handler, int playerID, Item item)
+    {
+        Server serv = (Server)handler;
+
+        NetworkConnection targetPlayer;
+        if (GetConnection(serv, playerID, out targetPlayer))
+        {
+            int result = serv.m_Driver.BeginSend(NetworkPipeline.Null, targetPlayer, out var writer);
+            if (result == 0)
+            {
+                writer.WriteUInt((uint)NetworkMessageType.RECEIVE_ITEM);
+                writer.WriteInt(item.itemID);
+                serv.m_Driver.EndSend(writer);
+            }
+        }
+        else
+        {
+            Debug.LogError("Could not find connection");
+        }
+
+    }
+
+    public bool GetConnection(object handler, int playerID, out NetworkConnection targetConnection)
+    {
+        Server serv = (Server) handler;
+
+        foreach (NetworkConnection connection in serv.connectionList.Keys)
+        {
+            if (serv.connectionList.ContainsKey(connection))
+            {
+                if (serv.connectionList[connection] == playerID)
+                {
+                    targetConnection = connection;
+                    return true;
+                }
+            }
+        }
+
+        targetConnection = default;
+        return false;
     }
 }

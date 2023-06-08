@@ -24,11 +24,11 @@ public class LocalPlayer : APlayer
         if (Input.GetKeyDown(KeyCode.I))
         {
             Debug.Log("Used item!");
-            //currentItem.Use(this);  // Illegal
+            //currentItem.Use(this);  // Illegal, check with server
 
+            // Send item use to server
             FindObjectOfType<Client>().OnUseItem(currentItem);
-            // Send Item use;
-            //currentItem = null;
+            currentItem = null;
         }
     }
 
@@ -51,5 +51,12 @@ public class LocalPlayer : APlayer
         {
             tile.MarkAsPossibleMove();
         }
+    }
+
+    public void ObtainItem(Item item)
+    {
+        currentItem = item;
+        UIManager.Instance.SetItemText("Item: " + item.itemEventType);
+        Debug.LogError("Picked up Item!");
     }
 }
