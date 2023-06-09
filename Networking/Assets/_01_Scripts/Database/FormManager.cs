@@ -11,6 +11,8 @@ using UnityEngine.UI;
 // Form and menu manager in one ;)
 public class FormManager : MonoBehaviour
 {
+    public bool loginIntoServerOnStart = false;
+
     [Header("Login screen")]
     public GameObject login_menu;
     public TMP_InputField login_mailField;
@@ -31,16 +33,34 @@ public class FormManager : MonoBehaviour
     public TMP_Text scoreTextField;
     public GameObject recentScoresParent;
     public GameObject recentScorePrefab;
+    public GameObject leaderboardParent;
+    public GameObject leaderboardScoreTemplate;
+    public TMP_Text gamesPlayedText;
+
+    private string sessionId;
 
     private void Start()
     {
         login_submitButton.onClick.AddListener(SubmitLogin);
         register_submitButton.onClick.AddListener(SubmitRegistration);
+
+        if (loginIntoServerOnStart) ServerLogin();
+    }
+
+    public async void ServerLogin()
+    {
+        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/serverlogin.php?server_id=4&password=ducks69";
+        string response = await PostURL(phpUrl);
+
+        if (CheckErrors(response))
+        {
+            sessionId = response;
+        }
     }
 
     public async void SubmitLogin()
     {
-        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/userlogin.php?usermail={login_mailField.text}&password={login_passwordField.text}";
+        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/userlogin.php?usermail={login_mailField.text}&password={login_passwordField.text}&session_id={sessionId}";
         string response = await PostURL(phpUrl);
 
         if (CheckErrors(response))
@@ -61,15 +81,18 @@ public class FormManager : MonoBehaviour
 
     public async void SubmitRegistration()
     {
-        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/registerUser.php?email={register_mailField.text}&username={register_usernameField.text}&password={register_passwordField.text}&session_id=lbem30ojq32uda24e0g2b9uebl";
+        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/registerUser.php?email={register_mailField.text}&username={register_usernameField.text}&password={register_passwordField.text}&session_id=lbem30ojq32uda24e0g2b9uebl&session_id={sessionId}";
         string response = await PostURL(phpUrl);
 
         if (CheckErrors(response))
         {
+            JObject user = JObject.Parse(response);
+            AccountManager.playerID = (uint)user["id"];
+            AccountManager.userName = (string)user["name"];
+            AccountManager.userMail = (string)user["email"];
+
             register_menu.SetActive(false);
             home_menu.SetActive(true);
-
-            // userName = register_usernameField.text;
         }
         else
         {
@@ -77,14 +100,14 @@ public class FormManager : MonoBehaviour
         }
     }
 
-    public async void LoadDefaultScores()
+    public async void LoadPlayerScores()
     {
-        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/recentplayersscores.php?username={AccountManager.userName}";
+        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/recentplayersscores.php?player_id={AccountManager.playerID}&session_id={sessionId}";
         string response = await PostURL(phpUrl);
 
         if (CheckErrors(response))
         {
-            ParseScores(response);
+            ParsePlayerScores(response);
         }
         else
         {
@@ -92,9 +115,29 @@ public class FormManager : MonoBehaviour
         }
     }
 
+    public async void LoadLeaderboard()
+    {
+        string phpURL = $"https://studenthome.hku.nl/~marc.neeleman/monthlyLeaderboard.php?session_id={sessionId}";
+        string response = await PostURL(phpURL);
+
+        if (CheckErrors(response))
+        {
+            ParseLeaderboardScores(response);
+        }
+    }
+
+    public async void LoadGamePlayedAmount()
+    {
+        string phpURL = $"https://studenthome.hku.nl/~marc.neeleman/gamePlayedAmount.php?session_id={sessionId}";
+        string response = await PostURL(phpURL);
+
+        JObject jObject = JObject.Parse(response);
+        gamesPlayedText.text = $"Played this month: {jObject["games"]} games";
+    }
+
     public async void InsertScore(int player1ID, int player2ID, int winnerID)
     {
-        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/scoreinsert.php?player1_id={player1ID}&player2_id={player2ID}&winner_id={winnerID}";
+        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/scoreinsert.php?player1_id={player1ID}&player2_id={player2ID}&winner_id={winnerID}&session_id={sessionId}";
         string response = await PostURL(phpUrl);
     }
 
@@ -118,54 +161,16 @@ public class FormManager : MonoBehaviour
         }
     }
 
-    IEnumerator PostUserLogin(string userName, string password)
-    {
-        /*      // TODO: Server Authentication...
-
-                // yield op die return...
-
-                // TODO: Dit via een UI
-
-                //Use WWWForm with Post request
-
-                // WWWForm form = new WWWForm();
-                // form.AddField("username", "test");
-                // form.AddField("password", "test");
-                // // TODO: valid id from Server Auth
-                // form.AddField("sessionid", "cmj8fqtdh50fborr4tl63b46tdhord057uu19nhlvkrgqmfikdd1");*/
-
-        string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/userlogin.php?usermail={userName}&password={password}";
-        using (UnityWebRequest www = UnityWebRequest.Get(phpUrl))
-        {
-            yield return www.SendWebRequest();
-
-            if (www.result != UnityWebRequest.Result.Success)
-            {
-                Debug.Log(www.error);
-            }
-            else
-            {
-                Debug.Log(www.downloadHandler.text);
-
-                if (!www.downloadHandler.text.Contains("0"))
-                {
-                    LoadNextScene();
-                }
-                else
-                {
-                    Debug.Log("Login failed!");
-                }
-            }
-        }
-
-        yield return null;
-    }
-
     private void LoadNextScene()
     {
         SceneManager.LoadScene(1);
     }
 
+    /// <summary>
+    /// Returns false when errors are detected, true when no errors are detected.
+    /// </summary>
+    /// <param name="response"></param>
+    /// <returns></returns>
     public bool CheckErrors(string response)
     {
         if (response[0] != '0') return true;
@@ -176,7 +181,7 @@ public class FormManager : MonoBehaviour
         }
     }
 
-    public async void ParseScores(string text)
+    public async void ParsePlayerScores(string text)
     {
         await Task.Delay(10);
         string newText = (text.Remove(0, 10) + "]").Replace("}{", "},{");
@@ -188,16 +193,53 @@ public class FormManager : MonoBehaviour
 
             foreach (JObject score in json)
             {
-                string date = (string)score["date_time"];
-                string wins = (string)score["score"];
+                int player1_id = (int) score["player1_id"];
+                int player2_id = (int) score["player2_id"];
+                int winner_id = (int) score["winner_id"];
+                string player1_name = (string) score["p1_name"];
+                string player2_name = (string) score["p2_name"];
+                string date = (string) score["date_time"];
+
+                int win = winner_id == AccountManager.playerID ? 1 : 0;
+                int opponentID = player1_id == AccountManager.playerID ? player2_id : player1_id;
+                string opponentName = opponentID == player1_id ? player1_name : player2_name;
 
                 Instantiate(recentScorePrefab, recentScoresParent.transform)
                     .GetComponent<RecentScoreTemplate>()
-                    .DisplayData(AccountManager.userName, wins, date);
+                    .DisplayData(AccountManager.userName, win.ToString(), date, opponentName);
             }
         }
         catch(Exception e)
         {
+            ShowNoScoreText();
+        }
+    }
+
+    public async void ParseLeaderboardScores(string text)
+    {
+        await Task.Delay(10);
+
+        // Whoopsie
+        string newText = (text.Remove(0, 10) + "]").Replace("}{", "},{");
+        try
+        {
+            JArray json = JArray.Parse(newText);
+
+            foreach (JObject score in json)
+            {
+                int winCount = (int)score["wins"];
+                int winner_id = (int)score["winner_id"];
+                string winner_name = (string)score["winner_name"];
+
+                Instantiate(leaderboardScoreTemplate, leaderboardParent.transform)
+                    .GetComponent<MonthlyBestsTemplate>()
+                    .DisplayData(winner_name, winCount);
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.Log(e.Message);
+            Debug.Log(e.StackTrace);
             ShowNoScoreText();
         }
     }
