@@ -11,6 +11,7 @@ using UnityEngine.UI;
 // Form and menu manager in one ;)
 public class FormManager : MonoBehaviour
 {
+    public bool executeStart = true;
     public bool loginIntoServerOnStart = false;
 
     [Header("Login screen")]
@@ -37,13 +38,16 @@ public class FormManager : MonoBehaviour
     public GameObject leaderboardScoreTemplate;
     public TMP_Text gamesPlayedText;
 
-    private string sessionId;
+    private static string sessionId;
 
     private void Start()
     {
+        if (!executeStart) return;
+
         login_submitButton.onClick.AddListener(SubmitLogin);
         register_submitButton.onClick.AddListener(SubmitRegistration);
 
+        if (AccountManager.isSet) GoToHomeScreen();
         if (loginIntoServerOnStart) ServerLogin();
     }
 
@@ -65,18 +69,23 @@ public class FormManager : MonoBehaviour
 
         if (CheckErrors(response))
         {
-            JObject user = JObject.Parse(response);
-            AccountManager.playerID = (uint) user["id"];
-            AccountManager.userName = (string) user["name"];
-            AccountManager.userMail = (string) user["email"];
-
-            login_menu.SetActive(false);
-            home_menu.SetActive(true);
+            SaveAccountData(response);
         }
         else
         {
             Debug.Log("Login failed!");
         }
+    }
+
+    private void SaveAccountData(string response)
+    {
+        JObject user = JObject.Parse(response);
+        AccountManager.playerID = (uint)user["id"];
+        AccountManager.userName = (string)user["name"];
+        AccountManager.userMail = (string)user["email"];
+        AccountManager.isSet = true;
+
+        GoToHomeScreen();
     }
 
     public async void SubmitRegistration()
@@ -86,13 +95,7 @@ public class FormManager : MonoBehaviour
 
         if (CheckErrors(response))
         {
-            JObject user = JObject.Parse(response);
-            AccountManager.playerID = (uint)user["id"];
-            AccountManager.userName = (string)user["name"];
-            AccountManager.userMail = (string)user["email"];
-
-            register_menu.SetActive(false);
-            home_menu.SetActive(true);
+            SaveAccountData(response);
         }
         else
         {
@@ -139,6 +142,7 @@ public class FormManager : MonoBehaviour
     {
         string phpUrl = $"https://studenthome.hku.nl/~marc.neeleman/scoreinsert.php?player1_id={player1ID}&player2_id={player2ID}&winner_id={winnerID}&session_id={sessionId}";
         string response = await PostURL(phpUrl);
+        Debug.LogError("Response");
     }
 
     private async Task<string> PostURL(string phpUrl)
@@ -248,5 +252,12 @@ public class FormManager : MonoBehaviour
     {
         scoreTextField.GetComponent<TMP_Text>().enabled = true;
         scoreTextField.text = "No recent games";
+    }
+
+    private void GoToHomeScreen()
+    {
+        login_menu.SetActive(false);
+        register_menu.SetActive(false);
+        home_menu.SetActive(true);
     }
 }

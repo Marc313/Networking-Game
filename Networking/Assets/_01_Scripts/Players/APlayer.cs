@@ -10,20 +10,24 @@ public abstract class APlayer : MovingObject
 
     private void Start()
     {
-        currentPosition = transform.position.ToVector3Int();
+        SetPosition(transform.position, false);
     }
 
     public virtual void MoveToTile(Vector3Int position)
     {
         GridManager.GetTile(currentPosition).Disappear();
+
+        Vector3 moveDirection = (position - transform.position);
+        moveDirection.y = 0;
+        transform.forward = moveDirection.normalized;
         MoveToInSeconds(currentPosition, position, walkDuration);
         currentPosition = position;
     }
 
-    public virtual void SetPosition(Vector3 position, bool hasTurn)
+    public virtual void SetPosition(Vector3 position, bool highlightMoves)
     {
-        transform.position = position;
-        currentPosition = (position + Vector3.up).ToVector3Int() ;
+        currentPosition = position.ToVector3Int() ;
+        transform.position = currentPosition + Vector3.up;
     }
 
     public void TryObtainItem(Item item)

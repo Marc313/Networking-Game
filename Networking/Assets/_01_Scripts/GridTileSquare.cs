@@ -7,6 +7,7 @@ public class GridTileSquare : NetworkedObject, IPointerClickHandler, IPointerEnt
     public uint x, z;
     public Material clickedMaterial;
     public Material defaultMaterial;
+    public Material dangerMaterial;
 
     public bool isDisappeared;
     private bool isPossibleMove;
@@ -45,7 +46,7 @@ public class GridTileSquare : NetworkedObject, IPointerClickHandler, IPointerEnt
 
     public void MarkAsClicked()
     {
-        GetComponent<MeshRenderer>().material = defaultMaterial;
+        GetComponent<MeshRenderer>().material = dangerMaterial;
         //Invoke(nameof(Disappear), 1.0f);
     }
 

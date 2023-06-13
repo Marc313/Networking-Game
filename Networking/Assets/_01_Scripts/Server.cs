@@ -50,6 +50,7 @@ public class Server : MonoBehaviour
     private static bool isStarted;
     private static int callsThisFrame = 0;
     private static uint currentPlayerWithTurn;
+    private static int maxPlayerCount = 2;
 
     private void Start()
     {
@@ -171,15 +172,16 @@ public class Server : MonoBehaviour
 
     private static void HandleClientJoined(object handler, NetworkConnection connection, DataStreamReader stream)
     {
+        Server serv = (Server) handler;
+
         if (isStarted) {
             Debug.Log("Room full!");
             return; 
         }
 
-        Server serv = handler as Server;
         uint playerID = (uint) serv.connectionList.Count;
         uint dbPlayerID = stream.ReadUInt();
-
+            
         // Add to list
         serv.connectionList.Add(connection, playerID);
         serv.databasePlayerIDs.Add(playerID, dbPlayerID);
@@ -209,6 +211,15 @@ public class Server : MonoBehaviour
         {
             BroadcastPlayerJoined(connection, serv, playerID, otherConnection);
         }
+
+        UIManager.Instance.UpdatePlayerJoinedCount(serv.connectionList.Count);
+
+        // Check if game is full
+        if (serv.connectionList.Count == maxPlayerCount)
+        {
+            isStarted = true;
+            serv.startButton.interactable = true;
+        }
     }
 
     private static void HandlePlayerMoved(object handler, NetworkConnection connection, DataStreamReader stream)
@@ -218,26 +229,14 @@ public class Server : MonoBehaviour
         // Pop message
         uint playerID = stream.ReadUInt();
         uint playerX = stream.ReadUInt();
-        uint playerY = stream.ReadUInt();
-        Debug.Log($"Received Message: ({playerX}, {playerY})");
+        uint playerZ = stream.ReadUInt();
+        Debug.Log($"Received Message: ({playerX}, {playerZ})");
 
-        // Check Move validity & Imitate Outcome + Check win condition
-        Vector3Int movingPosition = new Vector3Int((int) playerX, 0, (int) playerY);
-        if (GridManager.GetNeighboursOfPosition(movingPosition).Count == 0)
-        {
-            // For 2 players a loss also means a win
-            Debug.LogError($"PLAYER {playerID} LOST");
+        // Check Move validity & Imitate Outcome
+        // if (Gridmanager.IsTileValid(movingPosition))
+        // Send reject message.
 
-            // Broadcast result
-            uint winnerID = (uint)GetNextPlayerID(playerID, serv.connectionList.Count);
-            BroadcastGameResult(serv, winnerID);
-
-            // Save result in database
-            uint winnerDatabaseID = serv.databasePlayerIDs[winnerID];
-            Debug.LogError($"WINNING PLAYER ID: {winnerDatabaseID}");
-            FindObjectOfType<FormManager>().InsertScore((int)serv.databasePlayerIDs[playerID], (int)winnerDatabaseID, (int)winnerDatabaseID);
-        }
-
+        // Send move to 
         if (serv.connectionList.ContainsKey(connection))
         {
             // Send confirm message back
@@ -252,7 +251,7 @@ public class Server : MonoBehaviour
 
                 uint nextPlayerID = (uint)GetNextPlayerID(playerID, serv.connectionList.Count);
                 currentPlayerWithTurn = nextPlayerID;
-                SendPlayerMove(connection, serv, nextPlayerID, playerX, playerY, writer);
+                SendPlayerMove(connection, serv, nextPlayerID, playerX, playerZ, writer);
 
                 if (nextPlayerID == 0)
                 {
@@ -267,6 +266,23 @@ public class Server : MonoBehaviour
         else
         {
             Debug.LogError($"Server: Unrecognized connection!");
+        }
+
+        // Check win condition
+        Vector3Int movingPosition = new Vector3Int((int)playerX, 0, (int)playerZ);
+        if (GridManager.GetNeighboursOfPosition(movingPosition).Count == 0)
+        {
+            // For 2 players a loss also means a win
+            Debug.LogError($"PLAYER {playerID} LOST");
+
+            // Broadcast result
+            uint winnerID = (uint)GetNextPlayerID(playerID, serv.connectionList.Count);
+            BroadcastGameResult(serv, winnerID);
+
+            // Save result in database
+            uint winnerDatabaseID = serv.databasePlayerIDs[winnerID];
+            Debug.LogError($"WINNING PLAYER ID: {winnerDatabaseID}");
+            FindObjectOfType<FormManager>().InsertScore((int)serv.databasePlayerIDs[playerID], (int)winnerDatabaseID, (int)winnerDatabaseID);
         }
     }
 

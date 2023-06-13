@@ -13,11 +13,6 @@ public class LocalPlayer : APlayer
 
     public Item currentItem;
 
-    private void Start()
-    {
-        currentPosition = transform.position.ToVector3Int();
-    }
-
     private void Update()
     {
         // Check for use item input if player has turn.

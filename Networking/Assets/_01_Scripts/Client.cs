@@ -90,9 +90,9 @@ public class Client : MonoBehaviour
         hasTurn = false;
         UIManager.Instance.SetTurnText(hasTurn);
 
-        MarkTile(x, y);
         PlayerManager.Instance.GetLocalPlayer().MoveToTile(new Vector3Int((int) x, 0, (int) y));
         EventSystem.RaiseEvent(EventName.LOCAL_MOVE_SENT);
+        MarkTile(x, y);
     }
 
     public void SendPlayerItemUse(object item)
@@ -179,6 +179,7 @@ public class Client : MonoBehaviour
     private void HandleGameStart(DataStreamReader reader)
     {
         uint startingPlayerID = reader.ReadUInt();
+        UIManager.Instance.DisableJoinScreen();
 
         if (playerID == startingPlayerID)
         {

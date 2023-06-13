@@ -110,7 +110,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c353124909e5fc4ca74966a5299be2f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  networkedID: 0
+  isServer: 0
   x: 0
-  y: 0
+  z: 0
   clickedMaterial: {fileID: 2100000, guid: 938112c95278a3c4484792107358766a, type: 2}
   defaultMaterial: {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  dangerMaterial: {fileID: 2100000, guid: 0e1d090b04414d14e997120a70e9cd30, type: 2}
+  isDisappeared: 0

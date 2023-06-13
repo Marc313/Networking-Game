@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class GridManager : NetworkedObject
 {
-    public static int sGridSize;
+    public static int sGridSize = 10;
     [SerializeField] private int gridSize = 10;
     [SerializeField] private GridTileSquare tilePrefab;
     [SerializeField] private GameObject itemPrefab;

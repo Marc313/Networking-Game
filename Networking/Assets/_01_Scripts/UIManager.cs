@@ -5,13 +5,17 @@ public class UIManager : MonoBehaviour
 {
     public static UIManager Instance;
 
+    [SerializeField] private GameObject debugInfo;
     [SerializeField] private TMP_Text playerIDText;
     [SerializeField] private TMP_Text turnText;
     [SerializeField] private TMP_Text itemText;
 
-    [SerializeField] private GameObject winScreen;
-    [SerializeField] private GameObject loseScreen;
+    [SerializeField] private GameObject resultScreen;
+    [SerializeField] private TMP_Text winScreenText;
     [SerializeField] private TMP_Text loseScreenText;
+
+    [SerializeField] private GameObject joinScreen;
+    [SerializeField] private TMP_Text playersJoinedCount;
 
     private void Awake()
     {
@@ -35,12 +39,27 @@ public class UIManager : MonoBehaviour
 
     public void ShowWinScreen()
     {
-        winScreen.SetActive(true);
+        resultScreen.SetActive(true);
+        winScreenText.gameObject.SetActive(true);
+        loseScreenText.gameObject.SetActive(false);
     }
 
     public void ShowLoseScreen(uint winnerID)
     {
-        loseScreen.SetActive(true);
-        loseScreenText.text = $"Oh no, you fell! {winnerID} won the game!";
+        resultScreen.SetActive(true);
+        winScreenText.gameObject.SetActive(false);
+        loseScreenText.gameObject.SetActive(true);
+        loseScreenText.text = $"Oh no, you fell! Player {winnerID} won the game!";
+    }
+
+    public void DisableJoinScreen()
+    {
+        joinScreen.SetActive(false);
+        debugInfo.SetActive(true);
+    }
+
+    public void UpdatePlayerJoinedCount(int players)
+    {
+        playersJoinedCount.text = $"Players: {players}/2";
     }
 }

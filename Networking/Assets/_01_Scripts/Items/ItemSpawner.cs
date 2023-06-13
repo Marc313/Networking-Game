@@ -16,7 +16,7 @@ public class ItemSpawner : Singleton<ItemSpawner>
         if (Random.Range(0f, 1f) < itemSpawnProbability)
         {
             // Return the id of one of the items randomly
-            return 1;
+            return Random.Range(0, items.Length) + 1;
         }
 
         // -1 means that no item should be spawned
