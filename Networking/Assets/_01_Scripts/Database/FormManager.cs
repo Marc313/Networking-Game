@@ -19,6 +19,7 @@ public class FormManager : MonoBehaviour
     public TMP_InputField login_mailField;
     public TMP_InputField login_passwordField;
     public Button login_submitButton;
+    public GameObject loginErrorMessage;
 
     [Header("Register screen")]
     public GameObject register_menu;
@@ -73,6 +74,7 @@ public class FormManager : MonoBehaviour
         }
         else
         {
+            if (loginErrorMessage != null) loginErrorMessage.SetActive(true);
             Debug.Log("Login failed!");
         }
     }
@@ -195,6 +197,14 @@ public class FormManager : MonoBehaviour
         {
             JArray json = JArray.Parse(newText);
 
+            if (json.Count > 0)
+            {
+                for (int i = 0; i < recentScoresParent.transform.childCount; i++)
+                {
+                    recentScoresParent.transform.GetChild(i).gameObject.SetActive(false);
+                }
+            }
+
             foreach (JObject score in json)
             {
                 int player1_id = (int) score["player1_id"];
@@ -229,15 +239,25 @@ public class FormManager : MonoBehaviour
         {
             JArray json = JArray.Parse(newText);
 
+            if (json.Count > 0)
+            {
+                for (int i = 0; i < leaderboardParent.transform.childCount; i++)
+                {
+                    leaderboardParent.transform.GetChild(i).gameObject.SetActive(false);
+                }
+            }
+
+            int position = 1;
             foreach (JObject score in json)
             {
                 int winCount = (int)score["wins"];
-                int winner_id = (int)score["winner_id"];
+                int winner_id = (int)score["win_id"];
                 string winner_name = (string)score["winner_name"];
+                float winRate = float.Parse((string) score["winRate"]);
 
                 Instantiate(leaderboardScoreTemplate, leaderboardParent.transform)
                     .GetComponent<MonthlyBestsTemplate>()
-                    .DisplayData(winner_name, winCount);
+                    .DisplayData(winner_name, winCount, winRate, position++);
             }
         }
         catch (Exception e)
