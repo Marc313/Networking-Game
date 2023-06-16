@@ -14,3 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemID: 1
   itemEventType: SwapPlayersEvent
+  icon: {fileID: 21300000, guid: e4c7d4a1e6254064dbbf70a17e705c08, type: 3}

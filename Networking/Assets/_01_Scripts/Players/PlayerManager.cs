@@ -1,5 +1,7 @@
 using MarcoHelpers;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
 
 public class PlayerManager : Singleton<PlayerManager>
@@ -39,7 +41,7 @@ public class PlayerManager : Singleton<PlayerManager>
 
     public void CreateLocalPlayer(uint playerID, Vector3Int position)
     {
-        position = startingPositions[playerOrder.Count];
+        position = startingPositions[(int)playerID];
         playerOrder.Add(playerID);
 
         localPlayer = Instantiate(localPlayerPrefab, position, Quaternion.identity, transform);
@@ -49,7 +51,7 @@ public class PlayerManager : Singleton<PlayerManager>
 
     public void CreateRemotePlayer(uint remotePlayerID, Vector3Int position)
     {
-        position = startingPositions[playerOrder.Count];
+        position = startingPositions[(int)remotePlayerID];
         playerOrder.Add(remotePlayerID);
 
         remotePlayers.Add(remotePlayerID, Instantiate(remotePlayerPrefab, position, Quaternion.identity, transform));
@@ -72,6 +74,27 @@ public class PlayerManager : Singleton<PlayerManager>
     public APlayer GetPlayer(uint playerID)
     {
         return playerID == localPlayerID ? localPlayer : GetRemotePlayer(playerID);
+    }
+
+    public List<APlayer> GetAllPlayers()
+    {
+        List<APlayer> players = new List<APlayer>();
+        foreach (uint playerID in playerOrder)
+        {
+            players.Add(GetPlayer(playerID));
+        }
+
+        return players;
+    }
+
+    public List<Vector3Int> GetAllPlayerPositions()
+    {
+        List<Vector3Int> posList = new List<Vector3Int>();
+        foreach (APlayer player in GetAllPlayers())
+        {
+            posList.Add(player.currentPosition);
+        }
+        return posList;
     }
 
     private void SwapPlayerPositions(object value = null)

@@ -1,0 +1,117 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1">
+  <Class Name="ItemSpawner">
+    <Position X="9.5" Y="2" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAABAAAAAAAAAAAgBAAAgAAAAAAAAAAAAAAAAAEA=</HashCode>
+      <FileName>Assets\_01_Scripts\Items\ItemSpawner.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Client">
+    <Position X="7" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAwFAABgBDAgAEAAEEABIBAQAKAAABAREBAAQAAACAA=</HashCode>
+      <FileName>Assets\_01_Scripts\Client.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Server">
+    <Position X="4.75" Y="1.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>ISSRAIAEADBACBAxkAAgBEAhAACAAAEAEBAAAhggAAA=</HashCode>
+      <FileName>Assets\_01_Scripts\Server.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Singleton&lt;T&gt;" Collapsed="true">
+    <Position X="12" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAQAAAAAAAAAA=</HashCode>
+      <FileName>Assets\_01_Scripts\Marco Packages\Design Patterns\Singleton.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NetworkManager">
+    <Position X="12" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAEAAAAAAAAIBAAAFAAAAAAAQBAAEAAAAAAAAAAAEA=</HashCode>
+      <FileName>Assets\_01_Scripts\NetworkManager.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="PlayerManager">
+    <Position X="14.25" Y="2" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAEAAAAAEAABAABFMAAAAAAAAQBAIAAAAIABkCEA=</HashCode>
+      <FileName>Assets\_01_Scripts\Players\PlayerManager.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="NetworkedObject">
+    <Position X="21" Y="1.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAEAAAAAQAAAAAAAQAAAAACAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Assets\_01_Scripts\NetworkedObject.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GridManager">
+    <Position X="16.5" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AQAAAgAAAAAACADBCIggCAAAACAEAkABAgAAAAIAAkM=</HashCode>
+      <FileName>Assets\_01_Scripts\GridManager.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="GridTileSquare">
+    <Position X="18.25" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IAAACAAAQgAAACAAEAAAAAAgAiAAAAAIACBAAQAACAA=</HashCode>
+      <FileName>Assets\_01_Scripts\GridTileSquare.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="ItemPickup">
+    <Position X="20" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>IAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAQAAAAAAAAAA=</HashCode>
+      <FileName>Assets\_01_Scripts\Items\ItemPickup.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="MovingObject">
+    <Position X="21.75" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAQACAA=</HashCode>
+      <FileName>Assets\_01_Scripts\Marco Packages\MovingObject.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="APlayer">
+    <Position X="23.75" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAEAAAAgACAIAAAAAAAAAAACAAAAAgAAAAAAAACAAAA=</HashCode>
+      <FileName>Assets\_01_Scripts\Players\APlayer.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="LocalPlayer">
+    <Position X="25.75" Y="5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAQAAASgAAAAAAAAAAAAQEAAAAAAAgAAAAAAAABAAgA=</HashCode>
+      <FileName>Assets\_01_Scripts\Players\LocalPlayer.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="RemotePlayer">
+    <Position X="25.75" Y="3.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Assets\_01_Scripts\Players\RemotePlayer.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Enum Name="NetworkMessageType" Collapsed="true">
+    <Position X="4.75" Y="1.25" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAEAAgBAAAAAAABCAAAAAAAAgAQAABgEAACAQAAKEAI=</HashCode>
+      <FileName>Assets\_01_Scripts\Server.cs</FileName>
+    </TypeIdentifier>
+  </Enum>
+  <Delegate Name="NetworkMessageHandler" Collapsed="true">
+    <Position X="4.75" Y="0.75" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAQAAQAAAAAAAACAAAAAAAAAA=</HashCode>
+      <FileName>Assets\_01_Scripts\Server.cs</FileName>
+    </TypeIdentifier>
+  </Delegate>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

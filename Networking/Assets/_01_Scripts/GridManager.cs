@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class GridManager : NetworkedObject
@@ -15,21 +16,26 @@ public class GridManager : NetworkedObject
 
     public Server server;
 
+    private void Awake()
+    {
+        generatedSquares = new Dictionary<Vector3Int, GridTileSquare>();
+    }
+
     /*    private void Start()
         {
             sGridSize = gridSize;
             OnGameStart();
         }*/
 
-/*    private void Start()
-    {
-        // Convert to trigger with the server button
-        //server = FindObjectOfType<Server>();
-        if (server != null)
+    /*    private void Start()
         {
-            OnGameStart();
-        }
-    }*/
+            // Convert to trigger with the server button
+            //server = FindObjectOfType<Server>();
+            if (server != null)
+            {
+                OnGameStart();
+            }
+        }*/
 
     public void OnGameStart()
     {
@@ -150,8 +156,15 @@ public class GridManager : NetworkedObject
 
     public static List<GridTileSquare> GetNeighboursOfPosition(Vector3Int currentPosition)
     {
-        GridTileSquare tile = generatedSquares[currentPosition];
-        return GetNeighbours(tile);
+        if (generatedSquares.ContainsKey(currentPosition))
+        {
+            GridTileSquare tile = generatedSquares[currentPosition];
+            return GetNeighbours(tile);
+        }
+        else
+        {
+            return new List<GridTileSquare>();
+        }
     }
 
     public static GridTileSquare GetTile(Vector3Int position)
@@ -175,12 +188,16 @@ public class GridManager : NetworkedObject
 
     public static Vector3Int GetRandomExistingTilePosition(params Vector3Int[] exceptions)
     {
-        Vector3Int[] keys = generatedSquares.Keys.ToArray();
+        Vector3Int[] availableTiles = generatedSquares.Keys.Where(key => generatedSquares[key].isDisappeared == false).ToArray();
+        exceptions = PlayerManager.Instance.GetAllPlayerPositions().ToArray();
+
         Vector3Int result;
+        int attempts = 0;
         do
         {
-            result = keys.GetRandomEntry();
-        } while (exceptions.Contains(result));
+            result = availableTiles.GetRandomEntry();
+            attempts++;
+        } while (exceptions.Contains(result) && attempts < 100);
 
         return result;
     }
@@ -203,5 +220,14 @@ public class GridManager : NetworkedObject
     {
         if (!generatedSquares.ContainsKey(new Vector3Int((int)tile.x, 0, (int)tile.z)))
             generatedSquares.Add(new Vector3Int((int)tile.x, 0, (int)tile.z), tile);
+    }
+
+    public static bool IsLosePosition(Vector3Int position)
+    {
+        position.y = 0;
+
+        return  !generatedSquares.ContainsKey(position)
+                || GetNeighboursOfPosition(position).Count == 0
+                || GetTile(position).isDisappeared;
     }
 }

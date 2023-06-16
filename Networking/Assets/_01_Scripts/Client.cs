@@ -13,8 +13,13 @@ public class Client : MonoBehaviour
     private uint playerID;
     private static bool hasTurn;
 
+    [SerializeField] private GameObject inGameManagers;
+
     private void Start()
     {
+        // Reset static variable
+        hasTurn = false;
+
         Debug.LogError("This will show up");
         networkDriver = NetworkDriver.Create();
         connection = default(NetworkConnection);
@@ -180,6 +185,7 @@ public class Client : MonoBehaviour
     {
         uint startingPlayerID = reader.ReadUInt();
         UIManager.Instance.DisableJoinScreen();
+        inGameManagers.SetActive(true);
 
         if (playerID == startingPlayerID)
         {
@@ -312,6 +318,10 @@ public class Client : MonoBehaviour
         // Use playermanager and itemmanager.
         APlayer player = PlayerManager.Instance.GetPlayer(itemUserID);
         ItemSpawner.Instance.GetItemWithID(itemID).Use(player);
+        if (player is LocalPlayer)
+        {
+            (player as LocalPlayer).AfterItemUse();
+        }
     }
 
     private void HandleRPCMessage(DataStreamReader stream)

@@ -112,6 +112,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 41cb77c9acc75ee40826a51dcadf0303, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  networkedID: 0
+  isServer: 0
   rotationCurve:
     serializedVersion: 2
     m_Curve: []

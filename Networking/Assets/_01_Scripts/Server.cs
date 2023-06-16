@@ -13,16 +13,16 @@ public delegate void NetworkMessageHandler(object handler, NetworkConnection con
 public enum NetworkMessageType
 {
     PLAYER_JOINED = 0,          // Acts as handshake
-    HANDSHAKE_RESPONSE = 1,
-    PLAYER_MOVED = 2,
-    PLAYER_QUIT = 3,
-    MOVE_CONFIRM = 4,
-    SEND_OPPONENT_CHOICE = 5,
-    SEND_PLAYER_ID = 6,          // Acts as handshake response
-    REMOTE_PLAYER_JOINED = 7,
-    GAME_START = 8,
-    SPAWN_OBJECT = 9,
-    DESTROY_OBJECT = 10,
+    HANDSHAKE_RESPONSE = 1,     // Unused
+    PLAYER_QUIT = 2,
+    REMOTE_PLAYER_JOINED = 3,
+    SEND_PLAYER_ID = 4,          // Acts as handshake response
+    GAME_START = 5,
+    SPAWN_OBJECT = 6,
+    DESTROY_OBJECT = 7,
+    PLAYER_MOVED = 8,
+    MOVE_CONFIRM = 9,
+    SEND_OPPONENT_CHOICE = 10,
     SEND_ITEM_USE = 11,
     RECEIVE_ITEM_USE = 12,
     RECEIVE_ITEM = 13,
@@ -56,7 +56,17 @@ public class Server : MonoBehaviour
     {
         StartServer();
         m_Connections = new NativeList<NetworkConnection>(16, Allocator.Persistent);
-        if (startButton != null) startButton.onClick.AddListener(StartGame);
+        if (startButton != null)
+        {
+            startButton.onClick.RemoveAllListeners();
+            startButton.onClick.AddListener(StartGame);
+        }
+
+        // Reset static variables
+        isStarted = false;
+        callsThisFrame = 0;
+        currentPlayerWithTurn = 0;
+        maxPlayerCount = 2;
     }
 
     private void StartServer()
@@ -109,7 +119,7 @@ public class Server : MonoBehaviour
                 {
                     // First UInt is always message type (this is our own first design choice)
                     NetworkMessageType msgType = (NetworkMessageType)stream.ReadUInt();
-                    Debug.Log("Type:" + msgType);
+                    Debug.LogError("Type:" + msgType);
 
                     if (networkMessageHandlers.ContainsKey(msgType))
                     {
@@ -269,20 +279,28 @@ public class Server : MonoBehaviour
         }
 
         // Check win condition
-        Vector3Int movingPosition = new Vector3Int((int)playerX, 0, (int)playerZ);
-        if (GridManager.GetNeighboursOfPosition(movingPosition).Count == 0)
+        CheckWin(serv);
+    }
+
+    private static void CheckWin(Server serv)
+    {
+        foreach (APlayer player in PlayerManager.Instance.GetAllPlayers())
         {
-            // For 2 players a loss also means a win
-            Debug.LogError($"PLAYER {playerID} LOST");
+            uint playerID = (uint) player.playerID;
+            if (GridManager.IsLosePosition(player.currentPosition))
+            {
+                // For 2 players a loss also means a win
+                Debug.LogError($"PLAYER {playerID} LOST");
 
-            // Broadcast result
-            uint winnerID = (uint)GetNextPlayerID(playerID, serv.connectionList.Count);
-            BroadcastGameResult(serv, winnerID);
+                // Broadcast result
+                uint winnerID = (uint)GetNextPlayerID(playerID, serv.connectionList.Count);   // Winner always the other player
+                BroadcastGameResult(serv, winnerID);
 
-            // Save result in database
-            uint winnerDatabaseID = serv.databasePlayerIDs[winnerID];
-            Debug.LogError($"WINNING PLAYER ID: {winnerDatabaseID}");
-            FindObjectOfType<FormManager>().InsertScore((int)serv.databasePlayerIDs[playerID], (int)winnerDatabaseID, (int)winnerDatabaseID);
+                // Save result in database
+                uint winnerDatabaseID = serv.databasePlayerIDs[winnerID];
+                Debug.LogError($"WINNING PLAYER ID: {winnerDatabaseID}");
+                FindObjectOfType<FormManager>().InsertScore((int)serv.databasePlayerIDs[playerID], (int)winnerDatabaseID, (int)winnerDatabaseID);
+            }
         }
     }
 
@@ -331,6 +349,8 @@ public class Server : MonoBehaviour
         {
             Debug.LogError("Item use blokked, not players turn");
         }
+
+        CheckWin(serv);
     }
 
     private static void TrySpawnItem(Server serv)

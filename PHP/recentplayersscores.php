@@ -15,7 +15,7 @@
     $recentScores = "SELECT s.player1_id, s.player2_id, p1.name as p1_name, p2.name as p2_name, s.winner_id, s.date_time FROM Scores s 
                     LEFT JOIN Players p1 ON (s.player1_id = p1.id) 
                     LEFT JOIN Players p2 ON (s.player2_id = p2.id) 
-                    WHERE p1.id = '$player_id' OR p2.id = '$player_id'
+                    WHERE s.player1_id = '$player_id' OR s.player2_id = '$player_id'
                     AND date_time BETWEEN '$lastMonthDate' AND '$todayDate' 
                     ORDER BY s.date_time desc 
                     LIMIT 6";

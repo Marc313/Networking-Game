@@ -7,6 +7,7 @@ public class Item : ScriptableObject
     public int itemID;
     public string itemEventType;
     protected ItemEvent itemEvent;
+    public Sprite icon;
 
     public virtual void Use(APlayer player)
     {

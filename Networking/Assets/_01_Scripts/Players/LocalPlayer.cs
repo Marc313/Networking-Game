@@ -18,13 +18,23 @@ public class LocalPlayer : APlayer
         // Check for use item input if player has turn.
         if (Input.GetKeyDown(KeyCode.I))
         {
-            Debug.Log("Used item!");
-            //currentItem.Use(this);  // Illegal, check with server
-
-            // Send item use to server
-            FindObjectOfType<Client>().OnUseItem(currentItem);
-            currentItem = null;
+            UseItem();
         }
+    }
+
+    public void UseItem()
+    {
+        Debug.Log("Used item!");
+        //currentItem.Use(this);  // Illegal, check with server
+
+        // Send item use to server
+        FindObjectOfType<Client>().OnUseItem(currentItem);
+    }
+
+    public void AfterItemUse()
+    {
+        currentItem = null;
+        FindObjectOfType<ItemButton>()?.DisableSelf();
     }
 
     public override void SetPosition(Vector3 position, bool hasTurn)
@@ -51,7 +61,7 @@ public class LocalPlayer : APlayer
     public void ObtainItem(Item item)
     {
         currentItem = item;
-        UIManager.Instance.SetItemText("Item: " + item.itemEventType);
+        UIManager.Instance.SetItemInfo("Item: " + item.itemEventType, item.icon);
         Debug.LogError("Picked up Item!");
     }
 }

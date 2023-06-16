@@ -1,21 +1,27 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
     public static UIManager Instance;
 
-    [SerializeField] private GameObject debugInfo;
-    [SerializeField] private TMP_Text playerIDText;
-    [SerializeField] private TMP_Text turnText;
-    [SerializeField] private TMP_Text itemText;
+    [Header("Join Screen menu")]
+    [SerializeField] private GameObject joinScreen;
+    [SerializeField] private TMP_Text playersJoinedCount;
 
+    [Header("Win/Lose Screen")]
     [SerializeField] private GameObject resultScreen;
     [SerializeField] private TMP_Text winScreenText;
     [SerializeField] private TMP_Text loseScreenText;
 
-    [SerializeField] private GameObject joinScreen;
-    [SerializeField] private TMP_Text playersJoinedCount;
+    [Header("Debug Info")]
+    [SerializeField] private GameObject debugInfo;
+    [SerializeField] private TMP_Text playerIDText;
+    [SerializeField] private TMP_Text turnText;
+    [SerializeField] private TMP_Text itemText;
+    [SerializeField] private Image itemIcon;
+
 
     private void Awake()
     {
@@ -24,6 +30,7 @@ public class UIManager : MonoBehaviour
 
     public void SetPlayerIDText(uint playerID)
     {
+        if (playerIDText != null)
         playerIDText.text = "Player ID: " + playerID;
     }
 
@@ -32,9 +39,11 @@ public class UIManager : MonoBehaviour
         turnText.text = "Turn: " + turn;
     }
 
-    public void SetItemText(string itemName)
+    public void SetItemInfo(string itemName, Sprite itemSprite)
     {
-        itemText.text = "Item: " + itemName;
+        //itemText.text = "Item: " + itemName;
+        itemIcon.gameObject.SetActive(true);
+        itemIcon.sprite = itemSprite;
     }
 
     public void ShowWinScreen()

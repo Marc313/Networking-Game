@@ -14,3 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemID: 0
   itemEventType: DestroyRangeEvent
+  icon: {fileID: 21300000, guid: b68b8c6cf89d72b4eb5f1dcdbf7bb976, type: 3}
